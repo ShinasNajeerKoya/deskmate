@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
 import '../app/settings.dart';
-import '../ble/mac_link.dart';
+import 'pair_page.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/widgets.dart';
 
@@ -219,15 +219,6 @@ class SettingsPage extends StatelessWidget {
             onTap: () => _editBattery(context, settings),
           ),
           row(
-            'Slack privacy',
-            toggle(
-              'Slack privacy',
-              true,
-              (_) => _toast(context, 'Privacy mode is always on: counts only, never messages.'),
-            ),
-            onTap: () => _toast(context, 'Privacy mode is always on: counts only, never messages.'),
-          ),
-          row(
             'Night clock when Mac sleeps',
             toggle('Night clock when Mac sleeps', settings.nightClock, settings.setNightClock),
           ),
@@ -240,7 +231,7 @@ class SettingsPage extends StatelessWidget {
             'Wi-Fi link',
             value(!link.wifiPaired ? 'Pair' : (link.wifiActive ? 'Connected' : 'Paired')),
             last: true,
-            onTap: () => showDialog<void>(context: context, builder: (_) => _WifiDialog(link: link)),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PairPage(link: link))),
           ),
         ],
       ),
@@ -369,140 +360,6 @@ class _LayoutThumb extends StatelessWidget {
         BentoCell(0, 1, b()),
         BentoCell(1, 1, b()),
         BentoCell(2, 1, b()),
-      ],
-    );
-  }
-}
-
-/// Pair with Deskmate Hub over Wi-Fi: type the 6-digit code from the Hub menu
-/// ("Pair a phone over Wi-Fi…"); the computer's IP is only needed when the network
-/// blocks automatic discovery.
-class _WifiDialog extends StatefulWidget {
-  const _WifiDialog({required this.link});
-  final MacLink link;
-
-  @override
-  State<_WifiDialog> createState() => _WifiDialogState();
-}
-
-class _WifiDialogState extends State<_WifiDialog> {
-  late final _code = TextEditingController();
-  late final _host = TextEditingController(text: widget.link.wifiManualHost ?? '');
-  bool _busy = false;
-  String? _error;
-
-  @override
-  void dispose() {
-    _code.dispose();
-    _host.dispose();
-    super.dispose();
-  }
-
-  Future<void> _pair() async {
-    final code = _code.text.replaceAll(RegExp(r'\D'), '');
-    if (code.length != 6) return setState(() => _error = 'Enter the 6-digit code from the Deskmate Hub menu.');
-    setState(() {
-      _busy = true;
-      _error = null;
-    });
-    final error = await widget.link.pairWifi(code, host: _host.text.trim().isEmpty ? null : _host.text.trim());
-    if (!mounted) return;
-    if (error == null) return Navigator.pop(context);
-    setState(() {
-      _busy = false;
-      _error = error;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final t = DeskmateTokens.of(context);
-    final link = widget.link;
-    InputDecoration field(String label, String hint) => InputDecoration(
-      labelText: label,
-      hintText: hint,
-      labelStyle: t.ui(13, color: t.muted),
-      hintStyle: t.ui(13, color: t.muted),
-      filled: true,
-      fillColor: t.panel2,
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-    );
-    // In landscape the keyboard takes most of the height, so the whole dialog
-    // scrolls, sits close to the top, and drops the explanation while typing.
-    final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
-    return AlertDialog(
-      backgroundColor: t.panel,
-      scrollable: true,
-      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
-      titlePadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
-      title: Text('Wi-Fi link', style: t.ui(16, weight: 600)),
-      content: SizedBox(
-        width: 560,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            if (link.wifiPaired) ...[
-              Text(
-                link.wifiActive
-                    ? 'Connected over Wi-Fi to ${link.wifiHubName ?? 'your computer'}.'
-                    : 'Paired with ${link.wifiHubName ?? 'your computer'}. Waiting for both to be on the same Wi-Fi.',
-                style: t.ui(13, color: t.muted),
-              ),
-            ] else ...[
-              if (!typing) ...[
-                Text(
-                  'On the computer, click the Deskmate Hub icon → "Pair a phone over Wi-Fi…" and type the code shown there. Both must be on the same network.',
-                  style: t.ui(13, color: t.muted),
-                ),
-                const SizedBox(height: 12),
-              ],
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _code,
-                      autofocus: true,
-                      keyboardType: TextInputType.number,
-                      maxLength: 7,
-                      style: t.num(22),
-                      decoration: field('Pairing code', '123 456').copyWith(counterText: ''),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: TextField(
-                      controller: _host,
-                      keyboardType: TextInputType.url,
-                      style: t.ui(14),
-                      decoration: field('Computer IP (optional)', 'e.g. 10.14.0.66'),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-            if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: t.ui(13, color: t.bannerError))],
-          ],
-        ),
-      ),
-      actions: [
-        if (link.wifiPaired)
-          TextButton(
-            onPressed: () async {
-              await link.forgetWifi();
-              if (context.mounted) Navigator.pop(context);
-            },
-            child: Text('Forget', style: t.ui(14, color: t.bannerError)),
-          ),
-        TextButton(onPressed: () => Navigator.pop(context), child: Text('Close', style: t.ui(14, color: t.muted))),
-        if (!link.wifiPaired)
-          TextButton(
-            onPressed: _busy ? null : _pair,
-            child: Text(_busy ? 'Pairing…' : 'Pair', style: t.ui(14, weight: 600, color: t.clay)),
-          ),
       ],
     );
   }

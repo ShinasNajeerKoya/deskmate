@@ -55,3 +55,6 @@ String rate(double? kbs) {
   if (kbs == null) return '—';
   return kbs >= 1000 ? '${(kbs / 1000).toStringAsFixed(1)} MB/s' : '${kbs.round()} KB/s';
 }
+
+/// "Thu"
+String weekdayShort(DateTime d) => _weekdays[d.weekday - 1].substring(0, 3);

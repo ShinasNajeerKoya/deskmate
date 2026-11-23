@@ -10,6 +10,7 @@ import '../pages/home_page.dart';
 import '../pages/link_diagnostics_page.dart';
 import '../pages/music_page.dart';
 import '../pages/night_clock.dart';
+import '../pages/pair_page.dart';
 import '../pages/not_designed_page.dart';
 import '../pages/settings_page.dart';
 import '../pages/system_page.dart';
@@ -56,6 +57,9 @@ class _ShellState extends State<Shell> {
   DateTime? _peekUntil;
   bool _dimmed = false;
   Timer? _tick;
+
+  /// The "unplug" banner was closed until the battery reaches this level (reset when unplugged).
+  int? _unplugSnoozedUntil;
 
   @override
   void initState() {
@@ -134,10 +138,26 @@ class _ShellState extends State<Shell> {
   Widget _board(DeskmateTokens t) {
     final home = _page == PageId.home;
     final s = widget.settings;
+    if (!widget.battery.charging) _unplugSnoozedUntil = null; // unplugged: start over
     final banners =
         [
-          if (home) connectionBanner(t, widget.link.state, onPair: () => _go(PageId.settings)),
-          batteryBanner(t, widget.battery.level, widget.battery.charging, s.batteryLow, s.batteryHigh),
+          if (home)
+            connectionBanner(
+              t,
+              widget.link.state,
+              onPair:
+                  () =>
+                      Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PairPage(link: widget.link))),
+            ),
+          batteryBanner(
+            t,
+            widget.battery.level,
+            widget.battery.charging,
+            s.batteryLow,
+            s.batteryHigh,
+            snoozedUntil: _unplugSnoozedUntil,
+            onClose: () => setState(() => _unplugSnoozedUntil = unplugSnoozeUntil(widget.battery.level ?? 0)),
+          ),
         ].whereType<Widget>().toList();
 
     return SafeArea(

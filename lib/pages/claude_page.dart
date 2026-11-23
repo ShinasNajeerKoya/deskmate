@@ -7,10 +7,20 @@ import '../theme/deskmate_tokens.dart';
 import '../ui/format.dart';
 import '../ui/widgets.dart';
 
-class ClaudePage extends StatelessWidget {
+class ClaudePage extends StatefulWidget {
   const ClaudePage({super.key, required this.now});
 
   final DateTime now;
+
+  @override
+  State<ClaudePage> createState() => _ClaudePageState();
+}
+
+class _ClaudePageState extends State<ClaudePage> {
+  /// Day picked in the tokens chart (0 = 6 days ago … 6 = today); null = today.
+  int? _day;
+
+  DateTime get now => widget.now;
 
   @override
   Widget build(BuildContext context) {
@@ -158,6 +168,9 @@ class ClaudePage extends StatelessWidget {
     );
 
     final days = c?.tokens7d ?? const <int>[];
+    final today = days.isEmpty ? 0 : days.length - 1;
+    final picked = (_day != null && _day! < days.length) ? _day! : today;
+    DateTime dayDate(int i) => now.subtract(Duration(days: today - i));
     final maxDay = days.isEmpty ? 1 : max(1, days.reduce(max));
     final tokens = Tile(
       color: t.panel,
@@ -171,8 +184,11 @@ class ClaudePage extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Text('Tokens today', style: t.ui(12, color: t.muted)),
-              Text(compact(c?.tokensToday), style: t.num(34, height: 1.1)),
+              Text(
+                picked == today ? 'Tokens today' : 'Tokens · ${weekdayShort(dayDate(picked))}',
+                style: t.ui(12, color: t.muted),
+              ),
+              Text(compact(days.isEmpty ? null : days[picked]), style: t.num(34, height: 1.1)),
             ],
           ),
           const SizedBox(width: 28),
@@ -183,26 +199,36 @@ class ClaudePage extends StatelessWidget {
                 for (var i = 0; i < days.length; i++) ...[
                   if (i > 0) const SizedBox(width: 10),
                   Expanded(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        Flexible(
-                          child: FractionallySizedBox(
-                            heightFactor: max(0.06, days[i] / maxDay),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                color: i == days.length - 1 ? t.clay : t.violet2,
-                                borderRadius: BorderRadius.circular(6),
+                    // Tap a day to see its tokens; tap it again for today.
+                    child: Semantics(
+                      button: true,
+                      selected: i == picked,
+                      label: '${weekdayShort(dayDate(i))}: ${compact(days[i])} tokens',
+                      child: GestureDetector(
+                        behavior: HitTestBehavior.opaque,
+                        onTap: () => setState(() => _day = (i == picked || i == today) ? null : i),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          children: [
+                            Flexible(
+                              child: FractionallySizedBox(
+                                heightFactor: max(0.06, days[i] / maxDay),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: i == picked ? t.clay : t.violet2,
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                ),
                               ),
                             ),
-                          ),
+                            const SizedBox(height: 4),
+                            Text(
+                              weekdayLetter(dayDate(i)),
+                              style: t.ui(11, weight: i == picked ? 700 : 400, color: i == picked ? t.text : t.muted),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          weekdayLetter(now.subtract(Duration(days: days.length - 1 - i))),
-                          style: t.ui(11, color: t.muted),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 ],

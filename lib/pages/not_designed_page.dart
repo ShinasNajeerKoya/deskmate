@@ -5,7 +5,7 @@ import '../theme/deskmate_tokens.dart';
 import '../ui/icons.dart';
 import '../ui/rail.dart';
 
-/// Stand-in for pages that aren't designed yet (Calendar, Slack, Weather,
+/// Stand-in for pages that aren't designed yet (Calendar, Weather,
 /// Shortcuts, GitHub).
 class NotDesignedPage extends StatelessWidget {
   const NotDesignedPage({super.key, required this.page});

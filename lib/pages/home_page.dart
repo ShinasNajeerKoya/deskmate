@@ -63,7 +63,7 @@ class HomePage extends StatelessWidget {
       BentoCell(3, 0, x.clock(), colSpan: 3, rowSpan: 2),
       BentoCell(3, 2, x.claudeSmall(), colSpan: 2),
       BentoCell(3, 3, x.bluetooth(), colSpan: 2),
-      BentoCell(5, 2, x.slackSmall()),
+      BentoCell(5, 2, x.ramSmall()),
       BentoCell(5, 3, x.cpuSmall()),
     ],
   );
@@ -174,11 +174,10 @@ class _HomeTiles {
     gap: gap,
   );
 
-  Widget _art(double size, double iconSize) => Container(
+  Widget _art(double size, double iconSize) => SizedBox(
     width: size,
     height: size,
-    decoration: BoxDecoration(color: t.violet2, borderRadius: BorderRadius.circular(14)),
-    child: Center(child: DIconView(DIcon.music, size: iconSize, color: t.lilac, strokeWidth: 1.8)),
+    child: ArtImage(bytes: scope.link.board.art[scope.link.board.music?.art], iconSize: iconSize),
   );
 
   Widget _musicButtons({required double playWidth}) {
@@ -309,12 +308,7 @@ class _HomeTiles {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: Container(
-                decoration: BoxDecoration(color: t.violet2, borderRadius: BorderRadius.circular(18)),
-                child: Center(child: DIconView(DIcon.music, size: 54, color: t.lilac, strokeWidth: 1.4)),
-              ),
-            ),
+            Expanded(child: ArtImage(bytes: scope.link.board.art[m?.art], radius: 18, iconSize: 54)),
             const SizedBox(height: 14),
             Row(
               children: [
@@ -377,17 +371,18 @@ class _HomeTiles {
     );
   }
 
-  Widget slackSmall() {
+  /// Memory use (Slack's old slot in Layout B; Slack is off for now).
+  Widget ramSmall() {
     if (_waiting) return const SkeletonTile();
-    final n = scope.link.board.slackUnread;
+    final s = scope.link.board.system;
     return Tile(
       color: t.butter,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      label: 'Slack unread',
-      onTap: () => scope.open(PageId.slack),
+      label: 'Memory',
+      onTap: () => scope.open(PageId.system),
       child: LabelValue(
-        label: Text('Slack', style: t.ui(12, weight: 600, color: t.butterInk)),
-        value: Text(n?.toString() ?? '—', style: t.num(28, height: 1, color: t.butterInk)),
+        label: Text('RAM', style: t.ui(12, weight: 600, color: t.butterInk)),
+        value: Text(pct(s?.memPct), style: t.num(28, height: 1, color: t.butterInk)),
       ),
     );
   }
@@ -418,7 +413,7 @@ class _HomeTiles {
       children: [
         Dot(color: t.mintInk),
         const SizedBox(width: 5),
-        Text(active == null ? 'Off' : 'Connected', style: t.ui(12, weight: 600, color: t.mintInk)),
+        Text(active == null ? 'Not connected' : 'Connected', style: t.ui(12, weight: 600, color: t.mintInk)),
       ],
     );
     final device = Row(
@@ -468,7 +463,7 @@ class _HomeTiles {
   }
 
   /// Focus timer (2 × 2 in Layout A). It runs on the phone, so it works even
-  /// before the Mac is found. Replaces the old quick buttons and Slack tile.
+  /// before the Mac is found. Replaces the old quick buttons and the Slack tile.
   Widget focusTimer() {
     final timer = scope.timer;
     final secs = (timer.remaining.inMilliseconds / 1000).ceil();

@@ -12,7 +12,6 @@ const pageIcons = {
   PageId.control: DIcon.bluetooth,
   PageId.timer: DIcon.timer,
   PageId.calendar: DIcon.calendar,
-  PageId.slack: DIcon.slack,
   PageId.weather: DIcon.weather,
   PageId.shortcuts: DIcon.shortcuts,
   PageId.github: DIcon.github,

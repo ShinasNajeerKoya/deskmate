@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
+import '../data/models.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/format.dart';
 import '../ui/icons.dart';
@@ -22,13 +23,7 @@ class MusicPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AspectRatio(
-            aspectRatio: 1,
-            child: Container(
-              decoration: BoxDecoration(color: t.violet2, borderRadius: BorderRadius.circular(20)),
-              child: Center(child: DIconView(DIcon.music, size: 60, color: t.lilac, strokeWidth: 1.3)),
-            ),
-          ),
+          AspectRatio(aspectRatio: 1, child: ArtImage(bytes: link.board.art[m?.art], radius: 20, iconSize: 60)),
           const SizedBox(width: 22),
           Expanded(
             child: ShrinkToFit(
@@ -56,7 +51,7 @@ class MusicPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        [m?.artist, m?.album].whereType<String>().join(' · '),
+                        [m?.artist, m?.album].whereType<String>().where((s) => s.trim().isNotEmpty).join(' · '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: t.ui(15, color: t.lilac),
@@ -157,44 +152,52 @@ class MusicPage extends StatelessWidget {
       ),
     );
 
-    final upNext = Container(
-      width: 196,
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(22)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Up next', style: t.ui(13, weight: 600)),
-          const SizedBox(height: 10),
-          Expanded(
-            child: ListView.separated(
-              padding: EdgeInsets.zero,
-              itemCount: m?.queue.length ?? 0,
-              separatorBuilder: (_, __) => const SizedBox(height: 10),
-              itemBuilder: (context, i) {
-                final q = m!.queue[i];
-                return Row(
+    // Previous 2 and next 2 songs; tap one to play it.
+    final previous = m?.previous ?? const <QueueItem>[];
+    final next = m?.next ?? const <QueueItem>[];
+    Widget song(QueueItem q) => Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(12),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: q.index == null ? null : () => link.sendCommand('music.play:${q.index}'),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Row(
+            children: [
+              SizedBox(width: 40, height: 40, child: ArtImage(bytes: link.board.art[q.art], radius: 10, iconSize: 16)),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(color: t.panel2, borderRadius: BorderRadius.circular(10)),
-                    ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(q.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 500)),
-                          Text(q.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(11, color: t.muted)),
-                        ],
-                      ),
-                    ),
+                    Text(q.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 500)),
+                    Text(q.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(11, color: t.muted)),
                   ],
-                );
-              },
-            ),
+                ),
+              ),
+              if (q.liked) ...[const SizedBox(width: 6), DIconView(DIcon.heart, size: 14, color: t.clay)],
+            ],
           ),
+        ),
+      ),
+    );
+    Widget header(String text) => Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(text, style: t.ui(12, weight: 600, color: t.muted)),
+    );
+
+    final upNext = Container(
+      width: 210,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(22)),
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          if (previous.isNotEmpty) ...[header('Previous'), ...previous.map(song), const SizedBox(height: 8)],
+          header('Up next'),
+          if (next.isEmpty) Text('Nothing queued', style: t.ui(12, color: t.muted)),
+          ...next.map(song),
         ],
       ),
     );

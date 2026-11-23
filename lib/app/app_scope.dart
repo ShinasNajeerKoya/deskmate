@@ -14,7 +14,6 @@ enum PageId {
   control('Control'),
   timer('Timer'),
   calendar('Calendar'),
-  slack('Slack'),
   weather('Weather'),
   shortcuts('Shortcuts'),
   github('GitHub'),

@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 // Data sent from the Mac. Every BLE message is UTF-8 JSON with a topic "t":
 //   {"t":"sys", ...}  {"t":"claude", ...}  {"t":"music", ...}
 //   {"t":"slack", ...}  {"t":"event", ...}  {"t":"power", ...}
@@ -93,9 +96,25 @@ class ClaudeUsage {
   );
 }
 
+/// A song before or after the current one. [index] identifies it for "play this song".
 class QueueItem {
-  const QueueItem(this.title, this.artist);
+  const QueueItem(this.title, this.artist, {this.index, this.art, this.liked = false});
   final String title, artist;
+  final int? index;
+  final String? art; // artwork id (see BoardData.art)
+  final bool liked;
+
+  static List<QueueItem> listFrom(Object? rows, {bool liked = false}) => [
+    for (final r in (rows as List? ?? const []))
+      if (r is List && r.length >= 2)
+        QueueItem(
+          r[0] as String,
+          r[1] as String,
+          index: r.length > 2 ? (r[2] as num?)?.toInt() : null,
+          art: r.length > 3 && (r[3] as String? ?? '').isNotEmpty ? r[3] as String : null,
+          liked: liked,
+        ),
+  ];
 }
 
 class NowPlaying {
@@ -109,14 +128,18 @@ class NowPlaying {
     this.volume,
     this.liked = false,
     this.shuffle = false,
-    this.queue = const [],
+    this.art,
+    this.previous = const [],
+    this.next = const [],
   });
 
   final String? title, artist, album;
   final bool playing, liked, shuffle;
   final int positionS, durationS;
   final double? volume; // 0..1
-  final List<QueueItem> queue;
+  final String? art; // artwork id (see BoardData.art)
+  /// Up to 2 songs before and 2 after the current one.
+  final List<QueueItem> previous, next;
 
   factory NowPlaying.fromJson(Map<String, dynamic> j) => NowPlaying(
     title: j['title'] as String?,
@@ -128,7 +151,9 @@ class NowPlaying {
     volume: _d(j['vol']),
     liked: j['liked'] as bool? ?? false,
     shuffle: j['shuffle'] as bool? ?? false,
-    queue: [for (final q in (j['queue'] as List? ?? const [])) QueueItem((q as List)[0] as String, q[1] as String)],
+    art: j['art'] as String?,
+    previous: QueueItem.listFrom(j['prev'], liked: j['allLiked'] == true),
+    next: QueueItem.listFrom(j['next'] ?? j['queue'], liked: j['allLiked'] == true),
   );
 }
 
@@ -222,8 +247,10 @@ class BoardData {
   ClaudeUsage? claude;
   NowPlaying? music;
   CalendarEvent? nextEvent;
-  int? slackUnread;
   MacBluetooth? bluetooth;
+
+  /// Artwork images by id (small JPEGs sent by the computer, which downloads them).
+  final art = <String, Uint8List>{};
   MacWifi? wifi;
 
   /// Last 5 minutes of CPU / memory pressure samples (one per sys message, every 2 s).
@@ -245,10 +272,14 @@ class BoardData {
         claude = ClaudeUsage.fromJson(j);
       case 'music':
         music = NowPlaying.fromJson(j);
+      case 'art':
+        final id = j['id'] as String?, data = j['d'] as String?;
+        if (id != null && data != null) {
+          art[id] = base64Decode(data);
+          if (art.length > 40) art.remove(art.keys.first); // keep memory small
+        }
       case 'event':
         nextEvent = CalendarEvent.fromJson(j);
-      case 'slack':
-        slackUnread = _i(j['unread']);
       case 'bluetooth':
         bluetooth = MacBluetooth.fromJson(j);
       case 'wifi':

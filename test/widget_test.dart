@@ -11,6 +11,7 @@ import 'package:deskmate/ble/mac_link.dart';
 import 'package:deskmate/data/models.dart';
 import 'package:deskmate/pages/home_page.dart';
 import 'package:deskmate/theme/deskmate_tokens.dart';
+import 'package:deskmate/ui/chrome.dart';
 import 'package:deskmate/ui/rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -91,7 +92,6 @@ TestLink linkWithData() {
     'tokens7d': [1, 2, 3, 4, 5, 6, 7],
     'models': {'Opus': 0.6, 'Sonnet': 0.3, 'Haiku': 0.1},
   });
-  link.feed({'t': 'slack', 'unread': 2});
   link.feed({'t': 'event', 'title': 'Standup', 'start': 1795000000});
   link.feed({
     't': 'bluetooth',
@@ -117,7 +117,6 @@ void main() {
     final link = TestLink()..connect();
     link.feed({'t': 'sys', 'cpu': 23.4, 'mem': 61.0});
     link.feed({'t': 'claude', 'h5': 62.0});
-    link.feed({'t': 'slack', 'unread': 4});
     await pumpShell(tester, link);
     await tester.pump();
     expect(find.text('Looking for your computer on Wi-Fi…'), findsNothing);
@@ -276,15 +275,15 @@ void main() {
 
   test('messages split into parts are rebuilt before parsing', () {
     final link = TestLink()..connect();
-    final full = base64Encode(utf8.encode(jsonEncode({'t': 'slack', 'unread': 7})));
+    final full = base64Encode(utf8.encode(jsonEncode({'t': 'claude', 'sessions': 7})));
     final half = full.length ~/ 2;
     link.feed({'t': 'part', 'id': 3, 'i': 1, 'n': 2, 'd': full.substring(half)});
-    expect(link.board.slackUnread, isNull);
+    expect(link.board.claude, isNull);
     link.feed({'t': 'part', 'id': 3, 'i': 0, 'n': 2, 'd': full.substring(0, half)});
-    expect(link.board.slackUnread, 7);
+    expect(link.board.claude?.sessions, 7);
   });
 
-  testWidgets('Wi-Fi pairing dialog keeps the code box visible with the keyboard open', (tester) async {
+  testWidgets('pairing page has its own number pad (no system keyboard) and fills the code', (tester) async {
     final link = TestLink();
     await pumpShell(tester, link);
     await openPage(tester, 'Settings');
@@ -292,14 +291,29 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('Wi-Fi link'));
     await tester.pumpAndSettle();
-    tester.view.viewInsets = FakeViewPadding(bottom: 1080 * 0.55); // landscape keyboard
-    addTearDown(tester.view.resetViewInsets);
-    await tester.pumpAndSettle();
+    expect(find.text('Pair with your computer'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    for (final d in ['4', '8', '2', '9', '1', '3']) {
+      await tester.tap(find.text(d).last);
+      await tester.pump();
+    }
     expect(tester.takeException(), isNull);
-    final code = find.widgetWithText(TextField, 'Pairing code');
-    expect(code, findsOneWidget);
-    final box = tester.getRect(code);
-    expect(box.height, greaterThan(30));
-    expect(box.bottom, lessThan(1080 * 0.45 / 2.625));
+    // 4, 8 and 9 aren't step numbers, so they appear exactly twice: keypad + code box.
+    for (final d in ['4', '8', '9']) {
+      expect(find.text(d), findsNWidgets(2), reason: 'digit $d on the keypad and in the code boxes');
+    }
+  });
+
+  test('closing the unplug banner hides it until the next 10% step; 100% can\'t be closed', () {
+    expect(unplugSnoozeUntil(74), 80);
+    expect(unplugSnoozeUntil(80), 90);
+    expect(unplugSnoozeUntil(95), 100);
+    const t = DeskmateTokens.colorBlocks;
+    InfoBanner? banner(int level, int? snoozed) =>
+        batteryBanner(t, level, true, 30, 70, snoozedUntil: snoozed, onClose: () {}) as InfoBanner?;
+    expect(banner(74, null)?.onClose, isNotNull);
+    expect(banner(78, 80), isNull);
+    expect(banner(80, 80), isNotNull);
+    expect(banner(100, 100)?.onClose, isNull);
   });
 }

@@ -102,7 +102,6 @@ class FakeMacLink extends MacLink {
     if (_rng.nextDouble() >= 0.03) _send(_sys()); // ~3% simulated packet loss
     _send(_music());
     if (_ticks % 5 == 0) _send(_claude());
-    if (_ticks % 10 == 0) _send(_slack());
     if (_ticks % 30 == 0) _send(_event());
   }
 
@@ -120,6 +119,11 @@ class FakeMacLink extends MacLink {
         _liked = !_liked;
       case 'music.shuffle':
         _shuffle = !_shuffle;
+      default:
+        if (command.startsWith('music.play:')) {
+          final index = int.tryParse(command.split(':').last) ?? 0;
+          _skip(index >= 10 ? index - 10 : -index);
+        }
     }
     final arg = command.contains(':') ? command.substring(command.indexOf(':') + 1) : '';
     final dev = _bt[arg];
@@ -154,7 +158,6 @@ class FakeMacLink extends MacLink {
     _send(_sys());
     _send(_claude());
     _send(_music());
-    _send(_slack());
     _send(_event());
     _send(_bluetooth());
     _send(_wifi());
@@ -231,14 +234,17 @@ class FakeMacLink extends MacLink {
       'liked': _liked,
       'shuffle': _shuffle,
       'vol': _vol,
-      'queue': [
-        for (var i = 1; i <= 5; i++)
-          [_tracks[(_track + i) % _tracks.length].$1, _tracks[(_track + i) % _tracks.length].$2],
+      'allLiked': true,
+      'prev': [
+        for (var i = 2; i >= 1; i--)
+          [_tracks[(_track - i) % _tracks.length].$1, _tracks[(_track - i) % _tracks.length].$2, i, ''],
+      ],
+      'next': [
+        for (var i = 1; i <= 2; i++)
+          [_tracks[(_track + i) % _tracks.length].$1, _tracks[(_track + i) % _tracks.length].$2, 10 + i, ''],
       ],
     };
   }
-
-  Map<String, Object?> _slack() => {'t': 'slack', 'unread': 2 + _rng.nextInt(5)};
 
   Map<String, Object?> _event() {
     final now = DateTime.now();
