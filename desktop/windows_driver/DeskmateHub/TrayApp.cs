@@ -14,7 +14,7 @@ sealed class TrayApp : ApplicationContext
     readonly HubPeripheral _hub = new();
     readonly SystemCollector _system = new();
     readonly SynchronizationContext _ui;
-    readonly System.Windows.Forms.Timer _cpuTimer = new() { Interval = 1000 };
+    readonly System.Windows.Forms.Timer _cpuTimer = new() { Interval = 2000 }; // every 2 s: the radio also streams Bluetooth audio
     readonly System.Windows.Forms.Timer _clockTimer = new() { Interval = 60 * 60 * 1000 };
     int _seq;
     bool _asleep;

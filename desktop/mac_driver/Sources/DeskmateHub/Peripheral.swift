@@ -82,6 +82,13 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
 
     func peripheralManager(_ peripheral: CBPeripheralManager, didAdd service: CBService, error: Error?) {
         if let error { NSLog("Deskmate Hub: add service failed: \(error.localizedDescription)"); return }
+        advertise()
+    }
+
+    /// Advertising only while no phone is connected: it uses the same radio as
+    /// Bluetooth audio, so it stops once the phone is in.
+    private func advertise() {
+        guard subscribers.isEmpty, !manager.isAdvertising else { return }
         manager.startAdvertising([
             CBAdvertisementDataServiceUUIDsKey: [GATT.service],
             CBAdvertisementDataLocalNameKey: GATT.localName,
@@ -92,6 +99,9 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
                            didSubscribeTo characteristic: CBCharacteristic) {
         subscribers.removeAll { $0.identifier == central.identifier }
         subscribers.append(central)
+        // Ask for a relaxed link (longest interval) so earphone audio keeps priority.
+        manager.setDesiredConnectionLatency(.high, for: central)
+        manager.stopAdvertising()
         publishPhones()
         onSubscribed?()
     }
@@ -99,6 +109,7 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
     func peripheralManager(_ peripheral: CBPeripheralManager, central: CBCentral,
                            didUnsubscribeFrom characteristic: CBCharacteristic) {
         subscribers.removeAll { $0.identifier == central.identifier }
+        advertise()
         publishPhones()
     }
 

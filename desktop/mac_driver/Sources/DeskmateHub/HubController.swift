@@ -34,10 +34,11 @@ final class HubController {
             self.sendPower()
         }
 
-        every(1) { $0.sendSystem() }
-        every(2) { $0.sendMusic() }
-        every(3) { $0.sendIfChanged($0.bluetooth.message()) }
-        every(5) { $0.sendIfChanged($0.wifi.message()) }
+        // Kept light: the same Bluetooth radio streams your earphones' audio.
+        every(2) { $0.sendSystem() }
+        every(3) { $0.sendMusic() }
+        every(5) { $0.sendIfChanged($0.bluetooth.message()) }
+        every(10) { $0.sendIfChanged($0.wifi.message()) }
         every(10) { $0.sendSlack() }
         every(30) { $0.sendClaude() }
         every(3600) { $0.sendTime() }

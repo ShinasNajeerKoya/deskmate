@@ -15,7 +15,7 @@ final class BluetoothCollector: NSObject, IOBluetoothDeviceInquiryDelegate {
 
     /// Scanning makes Bluetooth audio stutter, so it only runs briefly, when the
     /// phone asks (Control Center open), never continuously.
-    func scan(seconds: Int = 10) {
+    func scan(seconds: Int = 6) {
         guard !scanning else { return }
         nearby.removeAll()
         let inquiry = IOBluetoothDeviceInquiry(delegate: self)
