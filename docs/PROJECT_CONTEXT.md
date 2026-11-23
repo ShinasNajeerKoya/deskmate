@@ -12,7 +12,7 @@ A desk display that sits beside a Mac and shows live info at a glance: Claude us
 - **Display:** Poco M2 Pro (preferred) or Poco M3, an old Android phone in **landscape only**. Usable area is about **915 × 412 dp**. The punch-hole camera sits on one side in landscape, so respect display cutouts.
 - **Phone has no SIM and no internet.** Everything comes from the Mac.
 - **Mac:** an office MacBook on office Wi-Fi. The phone **cannot** join the office Wi-Fi, because IT won't allow it.
-- **Link (since v0.4.0): Wi-Fi first, Bluetooth LE as backup.** Over Wi-Fi the phone and computer pair once with a 6-digit code from the Hub menu and every message is encrypted; Bluetooth is idle while Wi-Fi works, which fixes earphone audio stutter (the Mac's Bluetooth radio is shared with audio). The office phone needs IT to allow it on the same network as the Mac (device-to-device traffic; Bonjour or a typed IP). Original decision: **Bluetooth Low Energy**. The Mac is the peripheral and the phone is the central. No wires, Wi-Fi or cloud relay. Mac Bluetooth also runs the user's earphones, so keep traffic light: updates every 1–2 s, small album-art thumbnails.
+- **Link (since v0.5.0): Wi-Fi only.** Bluetooth was removed as a link (23 Nov 2026) because it shared the Mac's radio with earphone audio and caused stutter. (v0.4.0 had Wi-Fi first, Bluetooth LE as backup.) Over Wi-Fi the phone and computer pair once with a 6-digit code from the Hub menu and every message is encrypted; Bluetooth is idle while Wi-Fi works, which fixes earphone audio stutter (the Mac's Bluetooth radio is shared with audio). The office phone needs IT to allow it on the same network as the Mac (device-to-device traffic; Bonjour or a typed IP). Original decision: **Bluetooth Low Energy**. The Mac is the peripheral and the phone is the central. No wires, Wi-Fi or cloud relay. Mac Bluetooth also runs the user's earphones, so keep traffic light: updates every 1–2 s, small album-art thumbnails.
 - Only **one Mac** will ever pair.
 
 ## Architecture
@@ -29,7 +29,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - command execution: media keys, shortcuts, lock screen
   - starts at login
 - **Phone side:** this Flutter project.
-  - BLE central: **flutter_blue_plus pinned to 1.36.8**, the last BSD-3 release. Deskmate is a personal project, so v2.0+ would also be free under its licence. The pin only avoids v2's build-time licence ping, which sends the package and app name to the author's server. Upgrading is fine if a v2 fix is ever needed.
+  - Link: encrypted Wi-Fi to the paired computer (v0.5.0+). `flutter_blue_plus` was removed with the Bluetooth link (it had been pinned to 1.36.8, the last BSD-3 release).
   - Uses a foreground service and wakelock to stay alive and connected. MIUI kills apps aggressively, so the setup checklist needs autostart on, no battery restrictions, and the app locked in recents.
 - **The Mac syncs the phone's clock** on every connection, because the phone has no network time.
 - **Build order:** prove the risky part first. Step 1: the Mac sends live CPU % over BLE and the phone shows it, tested on the office Mac (IT permissions) and with MIUI's background killing. Then theme system → sidebar and Home → night clock and states → pages.
@@ -58,7 +58,8 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - Bluetooth off: a red banner.
 - **Battery warnings:** no smart plug, warnings only. A banner shows above **70% while charging** ("unplug") and below **30% while not charging** ("plug in"). Both limits can be changed in Settings. The battery warning shows on every page.
 - No "updated X minutes ago" labels anywhere.
-- **Burn-in protection (all devices):** the board shifts by up to 4 px every 3 minutes and the night clock drifts by up to 24 px every minute, animated smoothly. Needed for OLED screens such as the iQOO Neo 10R; harmless on LCD.
+- **No burn-in shift** (removed 23 Nov 2026: the drifting board and night clock looked odd). Revisit with a subtler approach if an OLED phone shows burn-in.
+- **Night clock only when the computer sleeps or locks** (the Hub sends `power`). A dropped connection never puts the board to sleep; it shows the blue "Reconnecting" banner.
 
 ## UI structure
 

@@ -53,7 +53,7 @@ flutter build apk --release              # sideload with: adb install -r build/a
 Deskmate Hub (macOS 13+): `cd desktop/mac_driver && swift run` for development, or `./scripts/build-app.sh` to build `dist/Deskmate Hub.app` and its release zip.
 Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on a Windows runner; it can't be built on the Mac.
 
-**Demo mode (simulators and emulators only):** detected natively (`MainActivity.kt` on Android, `targetEnvironment(simulator)` in `AppDelegate.swift` on iOS). The app then uses `FakeMacLink`, a simulated battery and `DemoTour` (`lib/app/demo_tour.dart`): 18 steps of **10 s** each, looping. Looking for Mac → connecting → connected Home → Claude, Music, System, Control Center, Timer and Settings pages → battery "plug in" and "unplug" banners → reconnecting → Mac asleep (night clock) → Bluetooth off → long drop ending on the night clock. The `flutter run` terminal prints a countdown for every step: `[demo] 04/18 Connected · Claude page · ⏱ 7s left`. Real phones always use real Bluetooth. `--dart-define=FAKE_MAC=true|false` overrides the detection.
+**Demo mode (simulators and emulators only):** detected natively (`MainActivity.kt` on Android, `targetEnvironment(simulator)` in `AppDelegate.swift` on iOS). The app then uses `FakeMacLink`, a simulated battery and `DemoTour` (`lib/app/demo_tour.dart`): 16 steps of **10 s** each, looping. Not paired → looking for the computer → connecting → connected Home → Claude, Music, System, Control Center, Timer and Settings pages → battery \"plug in\" and \"unplug\" banners → reconnecting → computer asleep (night clock) → awake. The `flutter run` terminal prints a countdown for every step: `[demo] 05/16 Connected · Claude page · ⏱ 7s left`. Real phones always use the real Wi-Fi link. `--dart-define=FAKE_MAC=true|false` overrides the detection.
 
 ## Hard rules
 
@@ -73,7 +73,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 - **Keep BLE traffic light** (the Mac's earphones share Bluetooth): live stats at most every 1–2 s, album art as small JPEG thumbnails only.
 - **Slack:** counts only. Never transfer or show message text.
 - **No "updated X minutes ago" labels.**
-- **`flutter_blue_plus` stays pinned at 1.36.8** unless I approve an upgrade.
+- **Phone ↔ computer link is Wi-Fi only** (encrypted, paired with a code; `docs/PROTOCOL.md`). Bluetooth was removed as a link in v0.5.0 (it made earphone audio stutter); don't re-add it without asking.
 - **Mac:**
   - Commands are an allow-list; never execute arbitrary strings from the phone.
   - Never read Claude credentials or call undocumented Anthropic endpoints.
@@ -105,7 +105,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 
 - **Done:**
   - planning and designs (Color Blocks: Home A and B, night clock, and the Claude, Music, System, Timer and Settings pages)
-  - Flutter project created, with `flutter_blue_plus` 1.36.8 and `wakelock_plus` added
+  - Flutter project created (`flutter_blue_plus` was used until v0.5.0, then removed with the Bluetooth link)
 - **Next:** **M0** (clean setup: remove extra platforms, landscape and immersive mode, bundled fonts, theme tokens, FakeTransport, registry), then **M1** (BLE spike: the Mac sends live CPU %, the phone shows it).
 - **Designed 23 Nov 2026:** Control Center page and the Home Bluetooth tile (replaces the calendar tile in Home A and B).
 - **Not designed yet:** Calendar, Slack, Weather, Shortcuts, GitHub pages and Home layout C.
