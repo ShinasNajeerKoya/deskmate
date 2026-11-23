@@ -13,9 +13,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.3.1</string>
+    <string>0.4.0</string>
     <key>CFBundleVersion</key>
-    <string>4</string>
+    <string>5</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -28,6 +28,12 @@
     <string>macOS only shows Wi-Fi network names to apps with Location access. Deskmate Hub uses it to show your Mac's Wi-Fi name on your phone; your location is never used.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Deskmate Hub reads the song playing in YouTube Music in Google Chrome and controls it from your phone.</string>
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Deskmate Hub sends live info to the Deskmate app on your phone over your local Wi-Fi network.</string>
+    <key>NSBonjourServices</key>
+    <array>
+        <string>_deskmate._tcp</string>
+    </array>
     <key>NSBluetoothAlwaysUsageDescription</key>
     <string>Deskmate Hub sends live info from this Mac to the Deskmate app on your phone over Bluetooth.</string>
 </dict>

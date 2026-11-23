@@ -10,6 +10,14 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
     var onCommand: ((String) -> Void)?
     var hasPhone: Bool { !subscribers.isEmpty }
 
+    /// Off while the phone is connected over Wi-Fi: no Bluetooth activity at all then.
+    var advertisingAllowed = true {
+        didSet {
+            guard manager != nil, manager.state == .poweredOn else { return }
+            if advertisingAllowed { advertise() } else { manager.stopAdvertising() }
+        }
+    }
+
     private var manager: CBPeripheralManager!
     private let stats = CBMutableCharacteristic(
         type: GATT.stats, properties: [.read, .notify], value: nil, permissions: [.readable])
@@ -88,7 +96,7 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
     /// Advertising only while no phone is connected: it uses the same radio as
     /// Bluetooth audio, so it stops once the phone is in.
     private func advertise() {
-        guard subscribers.isEmpty, !manager.isAdvertising else { return }
+        guard advertisingAllowed, subscribers.isEmpty, !manager.isAdvertising else { return }
         manager.startAdvertising([
             CBAdvertisementDataServiceUUIDsKey: [GATT.service],
             CBAdvertisementDataLocalNameKey: GATT.localName,

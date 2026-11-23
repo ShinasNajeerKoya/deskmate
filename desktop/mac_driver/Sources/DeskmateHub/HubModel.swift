@@ -7,6 +7,12 @@ final class HubModel: ObservableObject {
     @Published var bluetooth: Bluetooth = .starting
     @Published var connected = false
     @Published var phoneName: String?
+    var blePhoneName: String?
+    @Published var overWifi = false
+    /// Wi-Fi pairing code while pairing is open (2 minutes), and this Mac's IP for manual entry.
+    @Published var pairingCode: String?
+    @Published var localAddress: String?
+    @Published var wifiPaired = false
     @Published var openAtLogin = LoginItem.isEnabled
     @Published var claudeSetup: ClaudeCollector.Setup = .notConnected
     @Published var claudeMessage: String?
@@ -20,7 +26,7 @@ final class HubModel: ObservableObject {
         case .unauthorized: return "Bluetooth not allowed (System Settings → Privacy & Security → Bluetooth)"
         case .unsupported: return "This Mac can't share data over Bluetooth LE"
         case .on:
-            if connected { return "Connected to \(phoneName ?? "your phone")" }
+            if connected { return "Connected to \(phoneName ?? "your phone")" + (overWifi ? " over Wi-Fi" : " over Bluetooth") }
             return "Waiting for your phone…"
         }
     }

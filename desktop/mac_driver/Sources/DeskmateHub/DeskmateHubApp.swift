@@ -20,6 +20,16 @@ struct DeskmateHubApp: App {
                 Text("⚠︎ " + problem)
             }
             Divider()
+            if let code = model.pairingCode {
+                Text("Wi-Fi pairing code: \(code.prefix(3)) \(code.suffix(3))")
+                Text("Type it on the phone: Settings → Wi-Fi link (2 minutes)")
+                if let address = model.localAddress { Text("This Mac's IP (if asked): \(address)") }
+            } else {
+                Button(model.wifiPaired ? "Pair another phone over Wi-Fi…" : "Pair a phone over Wi-Fi…") {
+                    controller.pairOverWifi()
+                }
+            }
+            Divider()
             switch model.claudeSetup {
             case .connected:
                 Text("Claude usage connected")

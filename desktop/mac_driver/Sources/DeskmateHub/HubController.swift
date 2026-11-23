@@ -12,6 +12,7 @@ final class HubController {
     private let music = MusicCollector()
     private let slack = SlackCollector()
     private let claude = ClaudeCollector()
+    private let wifiLink = WifiServer()
     private var power: PowerMonitor?
     private var timers: [Timer] = []
     private var seq = 0
@@ -20,10 +21,16 @@ final class HubController {
 
     func start() {
         peripheral.onBluetooth = { [model] state in model.bluetooth = state }
-        peripheral.onPhonesChanged = { [weak self] connected, name in
-            self?.model.connected = connected
-            self?.model.phoneName = connected ? name : nil
+        peripheral.onPhonesChanged = { [weak self] _, name in
+            self?.model.blePhoneName = name
+            self?.updatePhones()
         }
+        wifiLink.onPhonesChanged = { [weak self] in self?.updatePhones() }
+        wifiLink.onReady = { [weak self] in self?.sendEverything() }
+        wifiLink.onCommand = { [weak self] command in self?.handle(command) }
+        wifiLink.onPairingChanged = { [weak self] in self?.updatePairing() }
+        wifiLink.start()
+        if ProcessInfo.processInfo.environment["DESKMATE_TEST_PAIR_CODE"] != nil { wifiLink.beginPairing() }
         peripheral.onSubscribed = { [weak self] in self?.sendEverything() }
         peripheral.onCommand = { [weak self] command in self?.handle(command) }
         bluetooth.onChange = { [weak self] in self?.sendIfChanged(self?.bluetooth.message()) }
@@ -46,6 +53,7 @@ final class HubController {
         LoginItem.enableOnFirstLaunch()
         model.openAtLogin = LoginItem.isEnabled
         model.claudeSetup = ClaudeCollector.setup
+        updatePairing()
     }
 
     /// "Connect Claude usage…" in the menu.
@@ -61,7 +69,7 @@ final class HubController {
         let timer = Timer(timeInterval: seconds, repeats: true) { [weak self] _ in
             guard let self else { return }
             self.refreshProblems()
-            guard self.peripheral.hasPhone else { return }
+            guard self.peripheral.hasPhone || self.wifiLink.hasPhone else { return }
             action(self)
         }
         timer.tolerance = seconds * 0.1
@@ -88,7 +96,7 @@ final class HubController {
         var m = system.collect()
         seq += 1
         m["seq"] = seq
-        peripheral.send(m)
+        broadcast(m)
     }
 
     private func sendMusic() {
@@ -111,7 +119,7 @@ final class HubController {
 
     /// Clock sync: the phone has no network time, so it uses the Mac's clock and time zone.
     private func sendTime() {
-        peripheral.send([
+        broadcast([
             "t": "time",
             "ts": Int(Date().timeIntervalSince1970 * 1000),
             "tz": TimeZone.current.secondsFromGMT() / 60,
@@ -119,7 +127,7 @@ final class HubController {
     }
 
     private func sendPower() {
-        peripheral.send(["t": "power", "asleep": asleep])
+        broadcast(["t": "power", "asleep": asleep])
     }
 
     /// Sends a message only if it differs from the last one of the same topic.
@@ -128,7 +136,33 @@ final class HubController {
               let data = try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys]) else { return }
         guard lastSent[topic] != data else { return }
         lastSent[topic] = data
+        broadcast(message)
+    }
+
+    /// Sends to the phone over whichever link it uses (Wi-Fi preferred).
+    private func broadcast(_ message: [String: Any]) {
+        wifiLink.send(message)
         peripheral.send(message)
+    }
+
+    private func updatePhones() {
+        let wifi = wifiLink.hasPhone
+        // No Bluetooth advertising while the phone is on Wi-Fi: keeps the radio free for earphones.
+        peripheral.advertisingAllowed = !wifi
+        model.connected = wifi || peripheral.hasPhone
+        model.overWifi = wifi
+        model.phoneName = wifi ? wifiLink.phoneName : model.blePhoneName
+    }
+
+    /// "Pair a phone over Wi-Fi…" in the menu.
+    func pairOverWifi() {
+        wifiLink.beginPairing()
+    }
+
+    private func updatePairing() {
+        model.pairingCode = wifiLink.pairingActive ? wifiLink.pairingCode : nil
+        model.localAddress = WifiServer.localAddress
+        model.wifiPaired = !wifiLink.phones.isEmpty
     }
 
     // MARK: Commands from the phone
