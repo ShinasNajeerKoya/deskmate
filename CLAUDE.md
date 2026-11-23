@@ -58,7 +58,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 ## Hard rules
 
 - **Android only, landscape only.** Target 915 × 412 dp and handle the display cutout. The `ios/` folder is kept **only** so the UI can be tested in the iOS Simulator (demo mode); the product ships on Android. Don't add web or desktop platforms.
-- **The phone makes zero network calls.**
+- **The phone makes zero internet calls.** Its only network traffic is the encrypted Wi-Fi link to its own paired computer on the local network (`docs/PROTOCOL.md`).
   - Fonts are bundled assets; never use `google_fonts` runtime fetching.
   - Weather, time and all other data come from the Mac.
 - **No hard-coded colours, fonts or radii in widgets.** Read everything from `DeskTheme` (ThemeExtension). There are 4 themes: Graphite, **Color Blocks (default)**, Paper and Paper Blocks.

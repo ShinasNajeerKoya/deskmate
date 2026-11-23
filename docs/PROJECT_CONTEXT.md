@@ -12,7 +12,7 @@ A desk display that sits beside a Mac and shows live info at a glance: Claude us
 - **Display:** Poco M2 Pro (preferred) or Poco M3, an old Android phone in **landscape only**. Usable area is about **915 × 412 dp**. The punch-hole camera sits on one side in landscape, so respect display cutouts.
 - **Phone has no SIM and no internet.** Everything comes from the Mac.
 - **Mac:** an office MacBook on office Wi-Fi. The phone **cannot** join the office Wi-Fi, because IT won't allow it.
-- **Link:** **Bluetooth Low Energy**. The Mac is the peripheral and the phone is the central. No wires, Wi-Fi or cloud relay. Mac Bluetooth also runs the user's earphones, so keep traffic light: updates every 1–2 s, small album-art thumbnails.
+- **Link (since v0.4.0): Wi-Fi first, Bluetooth LE as backup.** Over Wi-Fi the phone and computer pair once with a 6-digit code from the Hub menu and every message is encrypted; Bluetooth is idle while Wi-Fi works, which fixes earphone audio stutter (the Mac's Bluetooth radio is shared with audio). The office phone needs IT to allow it on the same network as the Mac (device-to-device traffic; Bonjour or a typed IP). Original decision: **Bluetooth Low Energy**. The Mac is the peripheral and the phone is the central. No wires, Wi-Fi or cloud relay. Mac Bluetooth also runs the user's earphones, so keep traffic light: updates every 1–2 s, small album-art thumbnails.
 - Only **one Mac** will ever pair.
 
 ## Architecture
