@@ -22,7 +22,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   collects stats, runs commands                                     all UI, sends control commands
 ```
 
-- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Planned responsibilities:
+- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Since v0.3.0 the macOS Hub sends live System, Bluetooth devices, Wi-Fi, YouTube Music (Chrome), Claude and Slack data; the Windows Hub sends System data only. One-time Mac setup for full data: Bluetooth (asked), Location (Wi-Fi name), Chrome → View → Developer → Allow JavaScript from Apple Events plus Automation (music), Accessibility (Slack badge), and "Connect Claude usage…" in the Hub menu (adds a status-line script to `~/.claude/settings.json`, with a backup; it never replaces an existing status line). Original planned responsibilities:
   - BLE GATT server
   - sleep/wake detection
   - stat collection
