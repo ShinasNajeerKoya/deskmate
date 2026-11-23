@@ -4,7 +4,7 @@ Everything decided in the planning and design sessions so far. Read this before 
 
 ## What it is
 
-A desk display that sits beside a Mac and shows live info at a glance: Claude usage, music, system stats, calendar, Slack and more. It's inspired by github.com/zacharyinserra/deskhub (ESP32 board + Windows Python companion), but it's built from scratch with its own design, and it targets macOS plus an Android phone.
+A desk display that sits beside a Mac and shows live info at a glance: Claude usage, music, system stats, calendar and more. It's inspired by github.com/zacharyinserra/deskhub (ESP32 board + Windows Python companion), but it's built from scratch with its own design, and it targets macOS plus an Android phone.
 
 ## Hardware and platform
 
@@ -22,7 +22,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   collects stats, runs commands                                     all UI, sends control commands
 ```
 
-- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Since v0.3.0 the macOS Hub sends live System, Bluetooth devices, Wi-Fi, YouTube Music (Chrome), Claude and Slack data; the Windows Hub sends System data only. One-time Mac setup for full data: Bluetooth (asked), Location (Wi-Fi name), Chrome → View → Developer → Allow JavaScript from Apple Events plus Automation (music), Accessibility (Slack badge), and "Connect Claude usage…" in the Hub menu (adds a status-line script to `~/.claude/settings.json`, with a backup; it never replaces an existing status line). Original planned responsibilities:
+- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Since v0.3.0 the macOS Hub sends live System, Bluetooth devices, Wi-Fi, YouTube Music (Chrome) and Claude data (Slack was removed in v0.6.0); the Windows Hub sends System data only. One-time Mac setup for full data: Bluetooth (asked), Location (Wi-Fi name), Chrome → View → Developer → Allow JavaScript from Apple Events plus Automation (music), and "Connect Claude usage…" in the Hub menu (adds a status-line script to `~/.claude/settings.json`, with a backup; it never replaces an existing status line). Original planned responsibilities:
   - BLE GATT server
   - sleep/wake detection
   - stat collection
@@ -46,7 +46,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 - **Calendar:** read from the Mac Calendar app (EventKit). **Not needed soon:** it's off Home (see below) and stays a sidebar tab to build later.
 - **Mac Bluetooth (Control Center):** through IOBluetooth: the connected device (e.g. earphones), paired devices, and nearby devices found by scanning. The phone can disconnect the current device, connect a paired one, and scan and pair a new one. **Never turn the Mac's Bluetooth off**, because that would cut the phone's own BLE link and the phone couldn't turn it back on.
 - **Mac Wi-Fi (Control Center):** through CoreWLAN: on/off and the network name. On macOS 14+ the network name needs Location permission for the Mac app; show "Wi-Fi" without a name if it's denied.
-- **Slack:** **privacy mode**, so show counts only and never message text. v1 can read the Slack dock badge count. A full Slack app needs workspace admin approval.
+- **Slack: removed for now** (23 Nov 2026: not needed). Original plan kept for later: **privacy mode**, so show counts only and never message text. v1 can read the Slack dock badge count. A full Slack app needs workspace admin approval.
 - **Weather:** fetched by the Mac and sent over (the phone has no internet).
 
 ## Behaviour
@@ -68,7 +68,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - **Settings pinned at the bottom**
   - tap to open a page, with no auto-scroll
   - editable order and visibility
-- **Pages:** Home, Claude, Music, System, **Control** (Control Center), Timer, Calendar, Slack, Weather, Shortcuts, GitHub, plus Settings.
+- **Pages:** Home, Claude, Music, System, **Control** (Control Center), Timer, Calendar, Weather, Shortcuts, GitHub, plus Settings.
 - **Control Center** (sidebar label "Control", Bluetooth icon): a mint "connected device" block with Disconnect and Switch device, a Mac Wi-Fi card with an on/off toggle, and a device list with "My devices" (Connect) and "Nearby" (Pair).
 - **Home:**
   - bento tiles of different sizes; each tile shows only its **one basic item**
@@ -80,7 +80,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - Every other page has **one layout only**.
 - **Clock:** a large flip-clock style, with digits on split square cards.
 - **Music tile:** previous, play/pause and next.
-- **No quick-shortcut buttons on Home, and no Slack tile in Layout A** (decided 23 Nov 2026). In Layout A their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, a progress line, Start/Pause and Reset; tapping it opens the Timer page. It works without the Mac, so it never shows as a skeleton. Shortcuts and Slack remain sidebar pages, and Layout B keeps its small Slack tile. Every theme follows this.
+- **No quick-shortcut buttons on Home, and no Slack tile in Layout A** (decided 23 Nov 2026). In Layout A their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, a progress line, Start/Pause and Reset; tapping it opens the Timer page. It works without the Mac, so it never shows as a skeleton. Shortcuts and Slack remain sidebar pages, and Layout B's small Slack tile is now a RAM tile. Every theme follows this.
 - **Focus timer default: 10 minutes** ("Focus" preset). Presets: Short break 5, Long break 15, Focus 10, Deep work 50.
 
 ## Design (locked)
@@ -102,13 +102,13 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 | clay | `#E07A4F` | Claude, primary action, ink `#1A0F0A` |
 | violet | `#2A2440` / `#3C3460` | music, text `#C9BFF2` |
 | mint | `#BFE3CC` | Bluetooth / Control Center (and the Calendar page later), ink `#10261A` |
-| butter | `#F2D16B` | Slack, ink `#2A2108` |
+| butter | `#F2D16B` | RAM tile on Home B (was Slack), ink `#2A2108` |
 | ok | `#8FD6A8` | connected dot |
 
   - **Fonts:** DM Sans (UI) and Bricolage Grotesque (numbers and clock).
   - **Radius:** 20–26 on tiles, 16 on buttons.
   - **Sidebar:** a floating rounded panel; the active item is a cream pill with dark text.
-- **Not designed yet:** Calendar, Slack, Weather, Shortcuts, GitHub pages and Home layout C (C must use the Bluetooth tile, not a calendar tile).
+- **Not designed yet:** Calendar, Weather, Shortcuts, GitHub pages and Home layout C (C must use the Bluetooth tile, not a calendar tile).
 - **The other themes' boards** (Graphite, Paper, Paper Blocks) on the canvas still show the old "Next up" tile. Replace it with the Bluetooth tile when designing those themes.
 
 ## Later (phase 2)

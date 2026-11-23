@@ -30,11 +30,15 @@ Planned phone structure (brief, not done yet): `lib/app/`, `lib/core/`, `lib/dat
 
 **Deskmate Hub stays minimal:** its only UI is a menu-bar/tray menu showing "Connected to <phone name>", Open at login and Quit. Every detail is shown on the phone. It sends data, clock sync and sleep/lock state; see `docs/PROTOCOL.md`.
 
-Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `slack`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`.
+Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`.
 
 - **`control` = Control Center** for the **Mac's** Bluetooth (connected device, paired devices, scan and pair) and Wi-Fi (on/off, network name). Never turn the Mac's Bluetooth off.
 - **No calendar tile on Home**, in any theme or layout. That slot is the Bluetooth tile, which opens Control Center. Calendar stays a sidebar tab, built later (not needed soon).
-- **No quick-shortcut buttons and no Slack tile in Home Layout A.** Their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, progress, Start/Pause and Reset; tapping it opens the Timer page. The timer runs on the phone, so the tile is live even before the Mac is found (no skeleton). Shortcuts and Slack stay sidebar pages; Layout B keeps its small Slack tile.
+- **No quick-shortcut buttons and no Slack tile in Home Layout A.** Their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, progress, Start/Pause and Reset; tapping it opens the Timer page. The timer runs on the phone, so the tile is live even before the Mac is found (no skeleton). Shortcuts and Slack stay sidebar pages; Layout B's small Slack tile is now a RAM tile.
+- **Battery "unplug" banner** (charging above the limit, default 70%) has an × that hides it until the next 10% step (74 → back at 80, 83 → back at 90); at 100% it has no ×. Unplugging resets it. The "plug in" banner can't be closed.
+- **Music:** shows artwork (downloaded by the Hub, sent as small JPEGs), the 2 previous and 2 next songs (tap one to play it; YouTube Music's hidden video copies are skipped so nothing shows twice), and the real liked state.
+- **Claude tokens:** tap a day's bar to see that day's tokens.
+- **Pairing:** a full-screen page with its own number pad (the system keyboard covered everything in landscape).
 - **The focus timer defaults to 10 minutes** (the "Focus" preset). Presets: Short break 5, Long break 15, Focus 10, Deep work 50.
 
 ## Commands
@@ -71,7 +75,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
   - Breaking changes bump `v` and need my approval.
   - Update `docs/PROTOCOL.md` in the same change.
 - **Keep BLE traffic light** (the Mac's earphones share Bluetooth): live stats at most every 1–2 s, album art as small JPEG thumbnails only.
-- **Slack:** counts only. Never transfer or show message text.
+- **Slack: removed for now** (23 Nov 2026; no tile, page or Hub collector). If it comes back: counts only, never message text.
 - **No "updated X minutes ago" labels.**
 - **Phone ↔ computer link is Wi-Fi only** (encrypted, paired with a code; `docs/PROTOCOL.md`). Bluetooth was removed as a link in v0.5.0 (it made earphone audio stutter); don't re-add it without asking.
 - **Mac:**
@@ -108,7 +112,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
   - Flutter project created (`flutter_blue_plus` was used until v0.5.0, then removed with the Bluetooth link)
 - **Next:** **M0** (clean setup: remove extra platforms, landscape and immersive mode, bundled fonts, theme tokens, FakeTransport, registry), then **M1** (BLE spike: the Mac sends live CPU %, the phone shows it).
 - **Designed 23 Nov 2026:** Control Center page and the Home Bluetooth tile (replaces the calendar tile in Home A and B).
-- **Not designed yet:** Calendar, Slack, Weather, Shortcuts, GitHub pages and Home layout C.
+- **Not designed yet:** Calendar, Weather, Shortcuts, GitHub pages and Home layout C.
 - **Open questions:**
   1. YouTube Music: desktop app or browser?
   2. Which city for weather?
