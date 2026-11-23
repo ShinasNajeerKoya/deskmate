@@ -292,4 +292,14 @@ void main() {
     link.feed({'t': 'power', 'asleep': false});
     expect(link.macAsleep, isFalse);
   });
+
+  test('messages split into parts are rebuilt before parsing', () {
+    final link = TestLink()..connect();
+    final full = base64Encode(utf8.encode(jsonEncode({'t': 'slack', 'unread': 7})));
+    final half = full.length ~/ 2;
+    link.feed({'t': 'part', 'id': 3, 'i': 1, 'n': 2, 'd': full.substring(half)});
+    expect(link.board.slackUnread, isNull);
+    link.feed({'t': 'part', 'id': 3, 'i': 0, 'n': 2, 'd': full.substring(0, half)});
+    expect(link.board.slackUnread, 7);
+  });
 }

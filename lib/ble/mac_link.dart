@@ -180,6 +180,12 @@ class MacLink extends ChangeNotifier {
       logEvent('Bad packet (${bytes.length} B)');
       return;
     }
+    // Messages larger than one BLE packet arrive as base64 parts; rebuild them first.
+    if (json['t'] == 'part') {
+      final whole = _parts.add(json);
+      if (whole != null) handlePacket(whole);
+      return;
+    }
     final seq = json['seq'] as int?;
     if (seq != null) {
       final last = _lastSeq;
@@ -206,6 +212,7 @@ class MacLink extends ChangeNotifier {
   }
 
   BluetoothCharacteristic? _commandChr;
+  final _parts = _PartBuffer();
 
   /// Tells the Hub this phone's name, so the computer can show "Connected to (phone name)".
   Future<void> _sayHello() async {
@@ -281,5 +288,28 @@ class MacLink extends ChangeNotifier {
     _adapterSub?.cancel();
     _watchdog?.cancel();
     super.dispose();
+  }
+}
+
+/// Reassembles {"t":"part","id","i","n","d"} messages (base64 slices of one JSON message).
+class _PartBuffer {
+  final _pending = <int, List<String?>>{};
+
+  /// Returns the full message bytes once every part of [part]'s message has arrived.
+  List<int>? add(Map<String, dynamic> part) {
+    final id = part['id'] as int?, i = part['i'] as int?, n = part['n'] as int?, d = part['d'] as String?;
+    if (id == null || i == null || n == null || d == null || i >= n || n > 200) return null;
+    final slots = _pending.putIfAbsent(id, () => List<String?>.filled(n, null));
+    if (slots.length != n) return null;
+    slots[i] = d;
+    if (slots.any((s) => s == null)) return null;
+    _pending.remove(id);
+    // Forget unfinished messages from long ago (a dropped part never completes).
+    _pending.removeWhere((k, _) => (id - k).abs() > 50);
+    try {
+      return base64Decode(slots.join());
+    } catch (_) {
+      return null;
+    }
   }
 }

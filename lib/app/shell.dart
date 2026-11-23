@@ -64,8 +64,17 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _now = widget.link.now()));
+    _tick = Timer.periodic(const Duration(seconds: 1), (t) {
+      setState(() => _now = widget.link.now());
+      // While Control Center is open, ask the computer for a fresh Bluetooth scan every 30 s.
+      if (_page == PageId.control && t.tick % 30 == 0) widget.link.sendCommand('bt.scan');
+    });
     widget.tour?.addListener(_followTour);
+  }
+
+  void _go(PageId page) {
+    if (page == PageId.control && _page != PageId.control) widget.link.sendCommand('bt.scan');
+    setState(() => _page = page);
   }
 
   void _followTour() {
@@ -114,7 +123,7 @@ class _ShellState extends State<Shell> {
           settings: widget.settings,
           battery: widget.battery,
           timer: widget.timer,
-          open: (p) => setState(() => _page = p),
+          open: _go,
           child: Scaffold(
             backgroundColor: t.bg,
             body:
@@ -153,7 +162,7 @@ class _ShellState extends State<Shell> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Rail(active: _page, onSelect: (p) => setState(() => _page = p)),
+            Rail(active: _page, onSelect: _go),
             const SizedBox(width: 10),
             Expanded(
               child: Column(
