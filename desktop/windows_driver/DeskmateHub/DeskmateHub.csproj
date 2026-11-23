@@ -12,7 +12,7 @@
     <AssemblyName>DeskmateHub</AssemblyName>
     <RootNamespace>DeskmateHub</RootNamespace>
     <Product>Deskmate Hub</Product>
-    <Version>0.2.0</Version>
+    <Version>0.3.0</Version>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <!-- Lets the project restore/compile on non-Windows machines (CI builds on Windows). -->
     <EnableWindowsTargeting>true</EnableWindowsTargeting>

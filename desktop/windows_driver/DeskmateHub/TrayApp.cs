@@ -12,7 +12,7 @@ sealed class TrayApp : ApplicationContext
     readonly ToolStripMenuItem _status = new("Starting…") { Enabled = false };
     readonly ToolStripMenuItem _login = new("Open at login") { CheckOnClick = true };
     readonly HubPeripheral _hub = new();
-    readonly CpuSampler _cpu = new();
+    readonly SystemCollector _system = new();
     readonly SynchronizationContext _ui;
     readonly System.Windows.Forms.Timer _cpuTimer = new() { Interval = 1000 };
     readonly System.Windows.Forms.Timer _clockTimer = new() { Interval = 60 * 60 * 1000 };
@@ -59,8 +59,7 @@ sealed class TrayApp : ApplicationContext
             else if (e.Reason == SessionSwitchReason.SessionUnlock) SetAsleep(false);
         };
 
-        _cpu.Sample(); // prime the delta
-        _cpuTimer.Tick += async (_, _) => await SendCpuAsync();
+        _cpuTimer.Tick += async (_, _) => await SendSystemAsync();
         _clockTimer.Tick += async (_, _) => await SendTimeAsync();
         _cpuTimer.Start();
         _clockTimer.Start();
@@ -79,12 +78,13 @@ sealed class TrayApp : ApplicationContext
         _icon.Text = tip.Length > 63 ? tip[..63] : tip;
     }
 
-    async Task SendCpuAsync()
+    async Task SendSystemAsync()
     {
-        var value = _cpu.Sample();
-        if (value is null) return;
+        if (!_hub.Connected) return;
+        var m = _system.Collect();
         _seq++;
-        await _hub.SendAsync(new() { ["t"] = "sys", ["seq"] = _seq, ["cpu"] = Math.Round(value.Value, 1) });
+        m["seq"] = _seq;
+        await _hub.SendAsync(m);
     }
 
     /// <summary>Clock sync: the phone has no network time, so it uses this PC's clock and time zone.</summary>

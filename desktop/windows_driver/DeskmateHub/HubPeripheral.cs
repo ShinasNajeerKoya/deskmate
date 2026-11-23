@@ -16,6 +16,7 @@ sealed class HubPeripheral
     GattServiceProvider? _provider;
     GattLocalCharacteristic? _stats;
     byte[] _latest = Array.Empty<byte>();
+    int _partId;
     readonly Dictionary<ulong, string> _names = new();
 
     /// <summary>Raised (on a background thread) when status, connection or phone name changes.</summary>
@@ -93,7 +94,26 @@ sealed class HubPeripheral
         if (_stats == null || !Connected) return;
         try
         {
-            await _stats.NotifyValueAsync(ToBuffer(bytes));
+            var max = _stats.SubscribedClients.Min(c => (int)c.MaxNotificationSize);
+            if (bytes.Length <= max)
+            {
+                await _stats.NotifyValueAsync(ToBuffer(bytes));
+                return;
+            }
+            // Too big for one packet: send base64 parts {"t":"part","id","i","n","d"}.
+            _partId = (_partId + 1) % 10000;
+            var text = Convert.ToBase64String(bytes);
+            var size = Math.Max(8, max - 48);
+            var count = (text.Length + size - 1) / size;
+            for (var i = 0; i < count; i++)
+            {
+                var part = new Dictionary<string, object>
+                {
+                    ["t"] = "part", ["id"] = _partId, ["i"] = i, ["n"] = count,
+                    ["d"] = text.Substring(i * size, Math.Min(size, text.Length - i * size)),
+                };
+                await _stats.NotifyValueAsync(ToBuffer(JsonSerializer.SerializeToUtf8Bytes(part)));
+            }
         }
         catch
         {
