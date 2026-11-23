@@ -440,7 +440,13 @@ class _HomeTiles {
         builder: (context, box) {
           if (box.maxHeight < 56) {
             // Short tile: one row.
-            return Row(children: [Expanded(child: device), const SizedBox(width: 8), status]);
+            return Row(
+              children: [
+                Expanded(child: device),
+                const SizedBox(width: 8),
+                Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: status)),
+              ],
+            );
           }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -450,8 +456,15 @@ class _HomeTiles {
                 children: [
                   DIconView(DIcon.bluetooth, size: 14, color: t.mintInk, strokeWidth: 2.2),
                   const SizedBox(width: 6),
-                  Expanded(child: Text('Bluetooth', style: t.ui(12, weight: 600, color: t.mintInk))),
-                  status,
+                  Expanded(
+                    child: Text(
+                      'Bluetooth',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: t.ui(12, weight: 600, color: t.mintInk),
+                    ),
+                  ),
+                  Flexible(child: FittedBox(fit: BoxFit.scaleDown, child: status)),
                 ],
               ),
               device,
