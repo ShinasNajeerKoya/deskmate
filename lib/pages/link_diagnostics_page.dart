@@ -38,9 +38,9 @@ class LinkDiagnosticsPage extends StatelessWidget {
     final (label, color) = switch (link.state) {
       LinkState.connected => ('Connected', linkColor(t, link.state)),
       LinkState.connecting => ('Connecting…', linkColor(t, link.state)),
-      LinkState.scanning => ('Looking for your Mac…', linkColor(t, link.state)),
+      LinkState.notPaired => ('Not paired (Settings → Wi-Fi link)', linkColor(t, link.state)),
+      LinkState.scanning => ('Looking for your computer on Wi-Fi…', linkColor(t, link.state)),
       LinkState.reconnecting => ('Reconnecting…', linkColor(t, link.state)),
-      LinkState.bluetoothOff => ('Bluetooth is off', linkColor(t, link.state)),
     };
     return Container(
       padding: const EdgeInsets.all(24),
@@ -71,7 +71,7 @@ class LinkDiagnosticsPage extends StatelessWidget {
           const Spacer(),
           if (link.state == LinkState.scanning)
             Text(
-              'No luck? On Android 10/11, Location must be switched on for Bluetooth scanning.',
+              'Not found? In Settings → Wi-Fi link, type the computer\'s IP shown in the Deskmate Hub menu.',
               style: TextStyle(color: t.muted, fontSize: 13),
             ),
         ],

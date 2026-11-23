@@ -15,7 +15,6 @@ import '../pages/settings_page.dart';
 import '../pages/system_page.dart';
 import '../pages/timer_page.dart';
 import '../theme/deskmate_tokens.dart';
-import '../ui/burn_in_shift.dart';
 import '../ui/chrome.dart';
 import '../ui/format.dart';
 import '../ui/rail.dart';
@@ -35,7 +34,6 @@ class Shell extends StatefulWidget {
     required this.battery,
     required this.timer,
     this.tour,
-    this.nightAfter = const Duration(seconds: 30),
   });
 
   final MacLink link;
@@ -46,8 +44,6 @@ class Shell extends StatefulWidget {
   /// Simulator demo tour; it switches pages as it goes.
   final DemoTour? tour;
 
-  /// How long a dropped link shows "Reconnecting" before falling back to the night clock.
-  final Duration nightAfter;
   static const peekFor = Duration(seconds: 10);
 
   @override
@@ -88,9 +84,9 @@ class _ShellState extends State<Shell> {
     if (!widget.settings.nightClock || !link.everConnected) return false;
     final now = DateTime.now();
     if (_peekUntil != null && now.isBefore(_peekUntil!)) return false;
-    if (link.macAsleep) return true; // asleep or locked, even if the link is still up
-    final lost = link.lostAt;
-    return link.state != LinkState.connected && lost != null && now.difference(lost) >= widget.nightAfter;
+    // Only when the computer itself sleeps or locks. A dropped connection never
+    // puts the board to sleep; it shows the "Reconnecting" banner instead.
+    return link.macAsleep;
   }
 
   void _setDim(bool dim) {
@@ -121,19 +117,14 @@ class _ShellState extends State<Shell> {
             backgroundColor: t.bg,
             body:
                 night
-                    // The night clock stays up for hours, so it drifts further and more often.
-                    ? BurnInShift(
-                      amplitude: 24,
-                      interval: const Duration(minutes: 1),
-                      child: NightClock(
-                        now: _now,
-                        use24h: widget.settings.use24h,
-                        status: NightClock.statusFor(widget.link),
-                        battery: widget.battery.level,
-                        onTap: () => setState(() => _peekUntil = DateTime.now().add(Shell.peekFor)),
-                      ),
+                    ? NightClock(
+                      now: _now,
+                      use24h: widget.settings.use24h,
+                      status: NightClock.statusFor(widget.link),
+                      battery: widget.battery.level,
+                      onTap: () => setState(() => _peekUntil = DateTime.now().add(Shell.peekFor)),
                     )
-                    : BurnInShift(child: _board(t)),
+                    : _board(t),
           ),
         );
       },
@@ -145,7 +136,7 @@ class _ShellState extends State<Shell> {
     final s = widget.settings;
     final banners =
         [
-          if (home) connectionBanner(t, widget.link.state),
+          if (home) connectionBanner(t, widget.link.state, onPair: () => _go(PageId.settings)),
           batteryBanner(t, widget.battery.level, widget.battery.charging, s.batteryLow, s.batteryHigh),
         ].whereType<Widget>().toList();
 

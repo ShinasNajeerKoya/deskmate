@@ -82,10 +82,11 @@ class FakeMacLink extends MacLink {
     setLinkState(LinkState.reconnecting);
   }
 
-  /// The phone's own Bluetooth is off (red banner).
-  void showBluetoothOff() {
-    markLost('Bluetooth off (fake)');
-    setLinkState(LinkState.bluetoothOff);
+  /// No computer paired yet (orange "Pair with your computer" banner).
+  void showNotPaired() {
+    resetForDemo();
+    setLinkState(LinkState.notPaired);
+    logEvent('Not paired (fake)');
   }
 
   void _tick() {

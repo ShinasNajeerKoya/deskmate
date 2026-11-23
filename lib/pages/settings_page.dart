@@ -427,46 +427,65 @@ class _WifiDialogState extends State<_WifiDialog> {
       fillColor: t.panel2,
       border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
     );
+    // In landscape the keyboard takes most of the height, so the whole dialog
+    // scrolls, sits close to the top, and drops the explanation while typing.
+    final typing = MediaQuery.viewInsetsOf(context).bottom > 0;
     return AlertDialog(
       backgroundColor: t.panel,
+      scrollable: true,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 40, vertical: 8),
+      titlePadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 10, 24, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       title: Text('Wi-Fi link', style: t.ui(16, weight: 600)),
       content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              if (link.wifiPaired) ...[
-                Text(
-                  link.wifiActive
-                      ? 'Connected over Wi-Fi to ${link.wifiHubName ?? 'your computer'}. Bluetooth is idle.'
-                      : 'Paired with ${link.wifiHubName ?? 'your computer'}. Using Bluetooth until both are on the same Wi-Fi.',
-                  style: t.ui(13, color: t.muted),
-                ),
-              ] else ...[
+        width: 560,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (link.wifiPaired) ...[
+              Text(
+                link.wifiActive
+                    ? 'Connected over Wi-Fi to ${link.wifiHubName ?? 'your computer'}.'
+                    : 'Paired with ${link.wifiHubName ?? 'your computer'}. Waiting for both to be on the same Wi-Fi.',
+                style: t.ui(13, color: t.muted),
+              ),
+            ] else ...[
+              if (!typing) ...[
                 Text(
                   'On the computer, click the Deskmate Hub icon → "Pair a phone over Wi-Fi…" and type the code shown there. Both must be on the same network.',
                   style: t.ui(13, color: t.muted),
                 ),
                 const SizedBox(height: 12),
-                TextField(
-                  controller: _code,
-                  keyboardType: TextInputType.number,
-                  maxLength: 7,
-                  style: t.num(22),
-                  decoration: field('Pairing code', '123 456'),
-                ),
-                TextField(
-                  controller: _host,
-                  keyboardType: TextInputType.url,
-                  style: t.ui(14),
-                  decoration: field('Computer IP (optional)', 'Only if it isn\'t found, e.g. 192.168.1.20'),
-                ),
               ],
-              if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: t.ui(13, color: t.bannerError))],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: _code,
+                      autofocus: true,
+                      keyboardType: TextInputType.number,
+                      maxLength: 7,
+                      style: t.num(22),
+                      decoration: field('Pairing code', '123 456').copyWith(counterText: ''),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _host,
+                      keyboardType: TextInputType.url,
+                      style: t.ui(14),
+                      decoration: field('Computer IP (optional)', 'e.g. 10.14.0.66'),
+                    ),
+                  ),
+                ],
+              ),
             ],
-          ),
+            if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: t.ui(13, color: t.bannerError))],
+          ],
         ),
       ),
       actions: [

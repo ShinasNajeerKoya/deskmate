@@ -10,9 +10,8 @@ import 'widgets.dart';
 
 Color linkColor(DeskmateTokens t, LinkState s) => switch (s) {
   LinkState.connected => t.ok,
-  LinkState.scanning || LinkState.connecting => t.bannerConnecting,
+  LinkState.notPaired || LinkState.scanning || LinkState.connecting => t.bannerConnecting,
   LinkState.reconnecting => t.bannerReconnecting,
-  LinkState.bluetoothOff => t.bannerError,
 };
 
 /// Top row: title on the left, Mac + battery/time chips on the right.
@@ -69,48 +68,54 @@ class PageHeader extends StatelessWidget {
 
 /// Slim coloured banner (connection state on Home, battery warnings everywhere).
 class InfoBanner extends StatelessWidget {
-  const InfoBanner({super.key, required this.text, required this.color, required this.ink});
+  const InfoBanner({super.key, required this.text, required this.color, required this.ink, this.onTap});
 
   final String text;
   final Color color, ink;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
     final t = DeskmateTokens.of(context);
-    return Container(
-      height: 30,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
-      child: Row(
-        children: [
-          Dot(color: ink),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 600, color: ink)),
-          ),
-        ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 30,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+        child: Row(
+          children: [
+            Dot(color: ink),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(text, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 600, color: ink)),
+            ),
+            if (onTap != null) Text('›', style: t.ui(16, weight: 600, color: ink)),
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Connection banner for Home, or null when connected.
-Widget? connectionBanner(DeskmateTokens t, LinkState s) => switch (s) {
+/// Connection banner for Home, or null when connected. [onPair] opens Settings.
+Widget? connectionBanner(DeskmateTokens t, LinkState s, {VoidCallback? onPair}) => switch (s) {
   LinkState.connected => null,
+  LinkState.notPaired => InfoBanner(
+    text: 'Pair with your computer: Settings → Wi-Fi link',
+    color: t.bannerConnecting,
+    ink: t.bannerConnectingInk,
+    onTap: onPair,
+  ),
   LinkState.scanning || LinkState.connecting => InfoBanner(
-    text: 'Looking for your Mac…',
+    text: 'Looking for your computer on Wi-Fi…',
     color: t.bannerConnecting,
     ink: t.bannerConnectingInk,
   ),
   LinkState.reconnecting => InfoBanner(
-    text: 'Reconnecting to your Mac…',
+    text: 'Reconnecting to your computer…',
     color: t.bannerReconnecting,
     ink: t.bannerReconnectingInk,
-  ),
-  LinkState.bluetoothOff => InfoBanner(
-    text: 'Bluetooth is off. Turn it on to reach your Mac.',
-    color: t.bannerError,
-    ink: t.bannerErrorInk,
   ),
 };
 

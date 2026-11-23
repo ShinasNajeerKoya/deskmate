@@ -22,8 +22,8 @@ Future<void> main() async {
   await settings.load();
 
   // Simulators and emulators can't reach the Mac's Bluetooth, so they get a
-  // simulated Mac plus a demo tour through every state and page (10 s each).
-  // Real phones always use real Bluetooth.
+  // simulated computer plus a demo tour through every state and page (10 s each).
+  // Real phones always use the real Wi-Fi link.
   // --dart-define=FAKE_MAC=true|false overrides the detection.
   const override = String.fromEnvironment('FAKE_MAC');
   final demo = override.isEmpty ? await isEmulator() : override == 'true';
@@ -59,14 +59,7 @@ class DeskmateApp extends StatelessWidget {
             title: 'Deskmate',
             debugShowCheckedModeBanner: false,
             theme: DeskmateTokens.forTheme(settings.theme).toThemeData(),
-            home: Shell(
-              link: link,
-              settings: settings,
-              battery: battery,
-              timer: timer,
-              tour: tour,
-              nightAfter: tour?.nightAfter ?? const Duration(seconds: 30),
-            ),
+            home: Shell(link: link, settings: settings, battery: battery, timer: timer, tour: tour),
           ),
     );
   }

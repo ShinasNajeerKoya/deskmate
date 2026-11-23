@@ -24,9 +24,8 @@ class NightClock extends StatelessWidget {
   final VoidCallback onTap;
 
   static String statusFor(MacLink link) {
-    if (link.macAsleep) return 'Mac asleep';
-    if (link.state == LinkState.bluetoothOff) return 'Bluetooth off';
-    return 'Mac not connected';
+    if (link.macAsleep) return 'Computer asleep';
+    return 'Computer not connected';
   }
 
   @override

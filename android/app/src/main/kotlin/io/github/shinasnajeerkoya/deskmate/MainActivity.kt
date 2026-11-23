@@ -24,6 +24,10 @@ class MainActivity : FlutterActivity() {
         MethodChannel(messenger, "deskmate/device").setMethodCallHandler { call, result ->
             when (call.method) {
                 "isEmulator" -> result.success(isEmulator())
+                // The phone's name from Settings → About phone (shown on the computer). No permission needed.
+                "deviceName" -> result.success(
+                    android.provider.Settings.Global.getString(contentResolver, "device_name") ?: Build.MODEL
+                )
                 // Android drops multicast packets unless an app holds this lock; needed to
                 // find the Mac via Bonjour (mDNS) on the Wi-Fi network.
                 "multicastLock" -> {

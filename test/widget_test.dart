@@ -11,7 +11,6 @@ import 'package:deskmate/ble/mac_link.dart';
 import 'package:deskmate/data/models.dart';
 import 'package:deskmate/pages/home_page.dart';
 import 'package:deskmate/theme/deskmate_tokens.dart';
-import 'package:deskmate/ui/burn_in_shift.dart';
 import 'package:deskmate/ui/rail.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,7 +109,7 @@ TestLink linkWithData() {
 void main() {
   testWidgets('Home shows skeletons and the orange banner before the first connection', (tester) async {
     await pumpShell(tester, TestLink());
-    expect(find.text('Looking for your Mac…'), findsOneWidget);
+    expect(find.text('Looking for your computer on Wi-Fi…'), findsOneWidget);
     expect(find.text('Claude'), findsOneWidget); // rail label only; tiles are skeletons
   });
 
@@ -121,7 +120,7 @@ void main() {
     link.feed({'t': 'slack', 'unread': 4});
     await pumpShell(tester, link);
     await tester.pump();
-    expect(find.text('Looking for your Mac…'), findsNothing);
+    expect(find.text('Looking for your computer on Wi-Fi…'), findsNothing);
     expect(find.text('62%'), findsWidgets);
     expect(find.text('Next up'), findsNothing, reason: 'no calendar tile on Home');
   });
@@ -199,7 +198,7 @@ void main() {
     for (var s = 0; s < DemoTour.steps.length * 10; s++) {
       await tester.pump(const Duration(seconds: 1));
     }
-    expect(states, containsAll(['scanning', 'connecting', 'connected', 'reconnecting', 'asleep', 'bluetoothOff']));
+    expect(states, containsAll(['notPaired', 'scanning', 'connecting', 'connected', 'reconnecting', 'asleep']));
     expect(
       pages,
       containsAll([
@@ -257,24 +256,6 @@ void main() {
     expect(FocusTimer().remaining, const Duration(minutes: 10));
   });
 
-  testWidgets('burn-in protection moves the board a few pixels over time', (tester) async {
-    await tester.pumpWidget(
-      const Directionality(
-        textDirection: TextDirection.ltr,
-        child: BurnInShift(
-          amplitude: 4,
-          interval: Duration(minutes: 3),
-          child: SizedBox(key: Key('box'), width: 10, height: 10),
-        ),
-      ),
-    );
-    final start = tester.getTopLeft(find.byKey(const Key('box')));
-    await tester.pump(const Duration(minutes: 3));
-    await tester.pump(const Duration(seconds: 3)); // let the slide finish
-    final moved = tester.getTopLeft(find.byKey(const Key('box')));
-    expect((moved - start).distance, closeTo(4, 0.01));
-  });
-
   test('clock sync follows the computer: offset and time zone', () {
     final link = TestLink()..connect();
     final hubNow = DateTime.now().toUtc().add(const Duration(minutes: 7));
@@ -282,7 +263,7 @@ void main() {
     final shown = link.now();
     final expected = hubNow.add(const Duration(minutes: 330));
     expect(shown.difference(expected).inSeconds.abs(), lessThan(2));
-    expect(link.clockOffset.inMinutes, 7);
+    expect(link.clockOffset.inSeconds, closeTo(420, 2));
   });
 
   test('a locked computer shows the night clock even while still connected', () {
@@ -301,5 +282,24 @@ void main() {
     expect(link.board.slackUnread, isNull);
     link.feed({'t': 'part', 'id': 3, 'i': 0, 'n': 2, 'd': full.substring(0, half)});
     expect(link.board.slackUnread, 7);
+  });
+
+  testWidgets('Wi-Fi pairing dialog keeps the code box visible with the keyboard open', (tester) async {
+    final link = TestLink();
+    await pumpShell(tester, link);
+    await openPage(tester, 'Settings');
+    await tester.ensureVisible(find.text('Wi-Fi link')); // Settings scrolls on short screens
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Wi-Fi link'));
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = FakeViewPadding(bottom: 1080 * 0.55); // landscape keyboard
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final code = find.widgetWithText(TextField, 'Pairing code');
+    expect(code, findsOneWidget);
+    final box = tester.getRect(code);
+    expect(box.height, greaterThan(30));
+    expect(box.bottom, lessThan(1080 * 0.45 / 2.625));
   });
 }

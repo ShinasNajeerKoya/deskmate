@@ -25,12 +25,9 @@ class DemoTour extends ChangeNotifier {
   final PhoneBattery battery;
   final Duration stepLength;
 
-  /// The night clock appears this long after a drop (the real app waits 30 s).
-  /// Equal to one step, so the "long drop" step ends on the night clock.
-  Duration get nightAfter => stepLength;
-
   static final steps = <DemoStep>[
-    DemoStep('Looking for your Mac (skeleton tiles, orange banner)', (l) => l.showLooking()),
+    DemoStep('Not paired yet (orange "Pair with your computer" banner)', (l) => l.showNotPaired()),
+    DemoStep('Looking for your computer on Wi-Fi (skeleton tiles)', (l) => l.showLooking()),
     DemoStep('Connecting', (l) => l.showConnecting()),
     DemoStep('Connected · Home', (l) => l.showConnected()),
     DemoStep('Connected · Claude page', (l) => l.showConnected(), page: PageId.claude),
@@ -41,13 +38,10 @@ class DemoTour extends ChangeNotifier {
     DemoStep('Connected · Settings page', (l) => l.showConnected(), page: PageId.settings),
     DemoStep('Battery low: "plug in" banner', (l) => l.showConnected(), battery: (24, false)),
     DemoStep('Battery high: "unplug" banner', (l) => l.showConnected(), battery: (82, true)),
-    DemoStep('Link dropped: reconnecting (blue banner)', (l) => l.showDrop()),
+    DemoStep('Link dropped: reconnecting (blue banner, board stays)', (l) => l.showDrop()),
     DemoStep('Reconnected', (l) => l.showConnected()),
-    DemoStep('Mac asleep: night clock', (l) => l.showMacAsleep()),
-    DemoStep('Mac awake again', (l) => l.showConnected()),
-    DemoStep('Phone Bluetooth off (red banner)', (l) => l.showBluetoothOff()),
-    DemoStep('Long drop: reconnecting…', (l) => l.showDrop()),
-    DemoStep('Long drop: night clock "Mac not connected"', (_) {}), // still lost; night clock takes over
+    DemoStep('Computer asleep or locked: night clock', (l) => l.showMacAsleep()),
+    DemoStep('Computer awake again', (l) => l.showConnected()),
   ];
 
   int index = 0;
