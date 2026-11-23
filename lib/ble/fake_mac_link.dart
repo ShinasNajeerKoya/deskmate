@@ -157,6 +157,7 @@ class FakeMacLink extends MacLink {
     _send(_event());
     _send(_bluetooth());
     _send(_wifi());
+    _send({'t': 'time', 'ts': DateTime.now().millisecondsSinceEpoch, 'tz': DateTime.now().timeZoneOffset.inMinutes});
   }
 
   Map<String, Object?> _bluetooth() => {

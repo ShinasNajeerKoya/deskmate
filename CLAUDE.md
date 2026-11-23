@@ -14,14 +14,21 @@ A personal desk display. A **Flutter app** runs on an old Android phone (Poco M2
 
 ## Repo layout
 
+Two products in one repo:
+- **Deskmate** (phone app, "install from mobile"): the Flutter project at the repo root (`lib/`, `android/`, `ios/`).
+- **Deskmate Hub** (computer app, "install on your computer"): native apps in `desktop/`, kept separate from the Flutter code.
+
 ```
-lib/app/          app root, routing, shell with the sidebar
-lib/core/         theme (DeskTheme tokens + 4 themes), shared widgets, logging, utils
-lib/data/         DeskTransport (BleTransport, FakeTransport), protocol models, SettingsRepository
-lib/features/<id>/  page.dart, tiles.dart, providers.dart: one folder per feature
-mac/DeskmateMac/  Swift menu-bar app: BLE/, Collectors/, Commands/, Power/, Claude/
-docs/             context, brief, protocol, phone setup
+lib/                          Deskmate phone app (Flutter)
+desktop/mac_driver/           Deskmate Hub for macOS: Swift/SwiftUI menu-bar app (SwiftPM; scripts/build-app.sh)
+desktop/windows_driver/       Deskmate Hub for Windows: C# (.NET 8) tray app, built by GitHub Actions
+.github/workflows/            CI (Windows Hub build)
+docs/                         context, brief, PROTOCOL.md, phone setup
 ```
+
+Planned phone structure (brief, not done yet): `lib/app/`, `lib/core/`, `lib/data/`, `lib/features/<id>/`.
+
+**Deskmate Hub stays minimal:** its only UI is a menu-bar/tray menu showing "Connected to <phone name>", Open at login and Quit. Every detail is shown on the phone. It sends data, clock sync and sleep/lock state; see `docs/PROTOCOL.md`.
 
 Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `slack`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`.
 
@@ -43,7 +50,8 @@ flutter test --update-goldens            # only after an intended UI change
 flutter build apk --release              # sideload with: adb install -r build/app/outputs/flutter-apk/app-release.apk
 ```
 
-Mac app: open `mac/DeskmateMac/DeskmateMac.xcodeproj` in Xcode and run it. Use macOS 13 or later.
+Deskmate Hub (macOS 13+): `cd desktop/mac_driver && swift run` for development, or `./scripts/build-app.sh` to build `dist/Deskmate Hub.app` and its release zip.
+Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on a Windows runner; it can't be built on the Mac.
 
 **Demo mode (simulators and emulators only):** detected natively (`MainActivity.kt` on Android, `targetEnvironment(simulator)` in `AppDelegate.swift` on iOS). The app then uses `FakeMacLink`, a simulated battery and `DemoTour` (`lib/app/demo_tour.dart`): 18 steps of **10 s** each, looping. Looking for Mac → connecting → connected Home → Claude, Music, System, Control Center, Timer and Settings pages → battery "plug in" and "unplug" banners → reconnecting → Mac asleep (night clock) → Bluetooth off → long drop ending on the night clock. The `flutter run` terminal prints a countdown for every step: `[demo] 04/18 Connected · Claude page · ⏱ 7s left`. Real phones always use real Bluetooth. `--dart-define=FAKE_MAC=true|false` overrides the detection.
 

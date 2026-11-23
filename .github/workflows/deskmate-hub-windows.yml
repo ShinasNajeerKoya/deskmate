@@ -1,0 +1,34 @@
+name: Deskmate Hub (Windows)
+
+# Builds the Windows tray app on a Windows runner (it can't be built on the Mac).
+on:
+  push:
+    paths:
+      - "desktop/windows_driver/**"
+      - ".github/workflows/deskmate-hub-windows.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Publish (self-contained single exe, no .NET install needed)
+        shell: pwsh
+        run: |
+          dotnet publish desktop/windows_driver/DeskmateHub/DeskmateHub.csproj `
+            -c Release -r win-x64 --self-contained true `
+            -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
+            -o out
+          $version = ([xml](Get-Content desktop/windows_driver/DeskmateHub/DeskmateHub.csproj)).Project.PropertyGroup.Version
+          Compress-Archive -Path out/DeskmateHub.exe -DestinationPath "DeskmateHub-Windows-$version.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DeskmateHub-Windows
+          path: DeskmateHub-Windows-*.zip

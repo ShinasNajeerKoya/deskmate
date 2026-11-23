@@ -44,9 +44,12 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Mac app (Swift package) build output
-/mac/.build/
-/mac/.swiftpm/
+# Deskmate Hub (desktop/) build output
+/desktop/mac_driver/.build/
+/desktop/mac_driver/.swiftpm/
+/desktop/mac_driver/dist/
+/desktop/windows_driver/**/bin/
+/desktop/windows_driver/**/obj/
 
 # Release signing: never commit keys (they live in ~/.deskmate/)
 key.properties

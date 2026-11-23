@@ -21,6 +21,20 @@ class MacLink extends ChangeNotifier {
   /// When the link was last lost (null while connected or never connected).
   DateTime? lostAt;
 
+  /// Clock sync: the phone has no network time, so it follows the computer's
+  /// clock and time zone (sent by Deskmate Hub on every connection and hourly).
+  Duration clockOffset = Duration.zero;
+  int? hubTimezoneMinutes;
+
+  /// The current time as the computer sees it (falls back to the phone's clock).
+  /// With a synced time zone this is a UTC value holding the computer's wall time,
+  /// so only read its fields (hour, minute, day…), not its zone.
+  DateTime now() {
+    final tz = hubTimezoneMinutes;
+    if (tz == null) return DateTime.now().add(clockOffset);
+    return DateTime.now().toUtc().add(clockOffset).add(Duration(minutes: tz));
+  }
+
   // Reliability counters.
   final startedAt = DateTime.now();
   int packets = 0;
@@ -44,7 +58,13 @@ class MacLink extends ChangeNotifier {
   /// Sends a control command to the Mac (media keys, shortcuts, lock).
   /// The Mac side doesn't accept commands yet, so this only logs for now.
   void sendCommand(String command) {
-    logEvent('Command "$command" (Mac commands not built yet)');
+    final chr = _commandChr;
+    if (chr == null || state != LinkState.connected) {
+      logEvent('Command "$command" not sent (not connected)');
+      return;
+    }
+    _write(chr, {'t': 'cmd', 'c': command});
+    logEvent('Command "$command" sent');
   }
 
   void start() {
@@ -106,10 +126,13 @@ class MacLink extends ChangeNotifier {
           .firstWhere((s) => s.uuid == Gatt.service)
           .characteristics
           .firstWhere((c) => c.uuid == Gatt.stats);
+      final service = services.firstWhere((s) => s.uuid == Gatt.service);
+      _commandChr = service.characteristics.where((c) => c.uuid == Gatt.command).firstOrNull;
       _valueSub = chr.onValueReceived.listen(handlePacket);
       device.cancelWhenDisconnected(_valueSub!);
       await chr.setNotifyValue(true);
       markConnected('Connected (MTU ${device.mtuNow})');
+      await _sayHello();
     } catch (e) {
       logEvent('Connect failed: $e');
       await device.disconnect().catchError((_) {});
@@ -168,11 +191,40 @@ class MacLink extends ChangeNotifier {
     _lastPacketAt = DateTime.now();
     if (json['t'] == 'power') {
       macAsleep = json['asleep'] == true;
-      if (macAsleep) logEvent('Mac going to sleep');
+      logEvent(macAsleep ? 'Mac asleep or locked' : 'Mac awake');
+    } else if (json['t'] == 'time') {
+      final ts = json['ts'] as int?;
+      if (ts != null) {
+        clockOffset = Duration(milliseconds: ts - DateTime.now().millisecondsSinceEpoch);
+        hubTimezoneMinutes = json['tz'] as int?;
+        logEvent('Clock synced (phone off by ${clockOffset.inSeconds}s)');
+      }
     } else if (!board.apply(json)) {
       logEvent('Unknown message "${json['t']}"');
     }
     notifyListeners();
+  }
+
+  BluetoothCharacteristic? _commandChr;
+
+  /// Tells the Hub this phone's name, so the computer can show "Connected to (phone name)".
+  Future<void> _sayHello() async {
+    final chr = _commandChr;
+    if (chr == null) return; // older Hub without a command channel
+    var name = 'Android phone';
+    try {
+      final n = await FlutterBluePlus.adapterName;
+      if (n.trim().isNotEmpty) name = n.trim();
+    } catch (_) {}
+    await _write(chr, {'t': 'hello', 'name': name});
+  }
+
+  Future<void> _write(BluetoothCharacteristic chr, Map<String, Object?> json) async {
+    try {
+      await chr.write(utf8.encode(jsonEncode(json)), withoutResponse: chr.properties.writeWithoutResponse);
+    } catch (e) {
+      logEvent('Write failed: $e');
+    }
   }
 
   void _checkSilence() {

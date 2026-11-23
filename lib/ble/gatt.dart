@@ -6,4 +6,7 @@ class Gatt {
 
   /// Notify + read. UTF-8 JSON messages with a topic "t"; see data/models.dart.
   static final stats = Guid('46ABD5B3-C525-463B-9E0A-5EB81163CCBB');
+
+  /// Phone → Hub. Write. UTF-8 JSON: {"t":"hello","name":…} after connecting, {"t":"cmd","c":…} for commands.
+  static final command = Guid('58DB6A63-A4AB-4A47-A369-966CAF61956F');
 }

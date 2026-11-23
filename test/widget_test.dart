@@ -274,4 +274,22 @@ void main() {
     final moved = tester.getTopLeft(find.byKey(const Key('box')));
     expect((moved - start).distance, closeTo(4, 0.01));
   });
+
+  test('clock sync follows the computer: offset and time zone', () {
+    final link = TestLink()..connect();
+    final hubNow = DateTime.now().toUtc().add(const Duration(minutes: 7));
+    link.feed({'t': 'time', 'ts': hubNow.millisecondsSinceEpoch, 'tz': 330}); // UTC+5:30
+    final shown = link.now();
+    final expected = hubNow.add(const Duration(minutes: 330));
+    expect(shown.difference(expected).inSeconds.abs(), lessThan(2));
+    expect(link.clockOffset.inMinutes, 7);
+  });
+
+  test('a locked computer shows the night clock even while still connected', () {
+    final link = TestLink()..connect();
+    link.feed({'t': 'power', 'asleep': true});
+    expect(link.macAsleep, isTrue);
+    link.feed({'t': 'power', 'asleep': false});
+    expect(link.macAsleep, isFalse);
+  });
 }

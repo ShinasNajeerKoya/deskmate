@@ -56,7 +56,7 @@ class Shell extends StatefulWidget {
 
 class _ShellState extends State<Shell> {
   PageId _page = PageId.home;
-  DateTime _now = DateTime.now();
+  late DateTime _now = widget.link.now(); // the computer's clock once synced
   DateTime? _peekUntil;
   bool _dimmed = false;
   Timer? _tick;
@@ -64,7 +64,7 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _now = DateTime.now()));
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _now = widget.link.now()));
     widget.tour?.addListener(_followTour);
   }
 
@@ -86,7 +86,7 @@ class _ShellState extends State<Shell> {
     if (!widget.settings.nightClock || !link.everConnected) return false;
     final now = DateTime.now();
     if (_peekUntil != null && now.isBefore(_peekUntil!)) return false;
-    if (link.macAsleep && link.state != LinkState.connected) return true;
+    if (link.macAsleep) return true; // asleep or locked, even if the link is still up
     final lost = link.lostAt;
     return link.state != LinkState.connected && lost != null && now.difference(lost) >= widget.nightAfter;
   }

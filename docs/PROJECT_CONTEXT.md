@@ -22,7 +22,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   collects stats, runs commands                                     all UI, sends control commands
 ```
 
-- **Mac side (to be created, `mac/` folder, Swift/SwiftUI menu-bar app):**
+- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Planned responsibilities:
   - BLE GATT server
   - sleep/wake detection
   - stat collection
