@@ -1,16 +1,19 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 import '../data/models.dart';
 import 'gatt.dart';
+import 'wifi_channel.dart';
 
 enum LinkState { bluetoothOff, scanning, connecting, connected, reconnecting }
 
-/// Finds the Mac, keeps the connection alive and exposes the latest board data.
-/// Also tracks reliability counters for the link soak test (MIUI background killing).
+/// Finds the computer (Deskmate Hub), keeps the connection alive and exposes the
+/// latest board data. Wi-Fi first when paired (keeps the Bluetooth radio free for
+/// earphones), Bluetooth LE as the backup. Also tracks reliability counters.
 class MacLink extends ChangeNotifier {
   LinkState state = LinkState.scanning;
   final board = BoardData();
@@ -52,12 +55,30 @@ class MacLink extends ChangeNotifier {
   bool _running = false;
   bool _everConnected = false;
 
+  // Wi-Fi link (preferred when paired).
+  WifiPairing? _pairing;
+  WifiChannel? _wifi;
+  Timer? _wifiTimer;
+  bool _wifiBusy = false;
+
+  /// True while connected over Wi-Fi (Bluetooth is idle then).
+  bool wifiActive = false;
+  bool get wifiPaired => _pairing?.paired ?? false;
+  String? get wifiHubName => _pairing?.hubName;
+  String? get wifiManualHost => _pairing?.manualHost;
+
   /// Whether a link has been up before (so a loss shows as "reconnecting").
   bool get everConnected => _everConnected;
 
   /// Sends a control command to the Mac (media keys, shortcuts, lock).
   /// The Mac side doesn't accept commands yet, so this only logs for now.
   void sendCommand(String command) {
+    final wifi = _wifi;
+    if (wifiActive && wifi != null) {
+      wifi.send({'t': 'cmd', 'c': command});
+      logEvent('Command "$command" sent over Wi-Fi');
+      return;
+    }
     final chr = _commandChr;
     if (chr == null || state != LinkState.connected) {
       logEvent('Command "$command" not sent (not connected)');
@@ -76,18 +97,20 @@ class MacLink extends ChangeNotifier {
           _scan();
         }
       } else if (s == BluetoothAdapterState.off || s == BluetoothAdapterState.unauthorized) {
-        if (state == LinkState.connected) lostAt = DateTime.now();
         _running = false;
+        logEvent('Bluetooth ${s.name}');
+        if (wifiActive) return; // Wi-Fi keeps working without Bluetooth
+        if (state == LinkState.connected) lostAt = DateTime.now();
         _teardown();
         setLinkState(LinkState.bluetoothOff);
-        logEvent('Bluetooth ${s.name}');
       }
     });
+    _initWifi();
     _watchdog = Timer.periodic(const Duration(seconds: 1), (_) => _checkSilence());
   }
 
   Future<void> _scan() async {
-    if (!_running) return;
+    if (!_running || wifiActive) return;
     setLinkState(_everConnected ? LinkState.reconnecting : LinkState.scanning);
     await _scanSub?.cancel();
     _scanSub = FlutterBluePlus.onScanResults.listen((results) {
@@ -101,7 +124,7 @@ class MacLink extends ChangeNotifier {
     } catch (e) {
       logEvent('Scan error: $e');
     }
-    if (_device == null) _scheduleRetry(const Duration(seconds: 3));
+    if (_device == null && !wifiActive) _scheduleRetry(const Duration(seconds: 3));
   }
 
   Future<void> _connect(BluetoothDevice device) async {
@@ -224,12 +247,129 @@ class MacLink extends ChangeNotifier {
   Future<void> _sayHello() async {
     final chr = _commandChr;
     if (chr == null) return; // older Hub without a command channel
-    var name = 'Android phone';
+    await _write(chr, {'t': 'hello', 'name': await _phoneName()});
+  }
+
+  Future<String> _phoneName() async {
     try {
       final n = await FlutterBluePlus.adapterName;
-      if (n.trim().isNotEmpty) name = n.trim();
+      if (n.trim().isNotEmpty) return n.trim();
     } catch (_) {}
-    await _write(chr, {'t': 'hello', 'name': name});
+    return 'Android phone';
+  }
+
+  // MARK: Wi-Fi
+
+  Future<void> _initWifi() async {
+    try {
+      _pairing = await WifiPairing.load();
+    } catch (_) {
+      return;
+    }
+    _wifiTimer = Timer.periodic(const Duration(seconds: 15), (_) => _tryWifi());
+    unawaited(_tryWifi());
+  }
+
+  /// Tries the typed address first, then computers found on the network.
+  Future<void> _tryWifi() async {
+    final pairing = _pairing;
+    final key = pairing?.key;
+    if (pairing == null || key == null || wifiActive || _wifiBusy) return;
+    _wifiBusy = true;
+    try {
+      final manual = pairing.manualHost;
+      final hosts = <(String, int)>[if (manual != null) (manual, WifiChannel.port), ...await WifiChannel.discover()];
+      for (final (host, port) in hosts) {
+        final channel = WifiChannel();
+        try {
+          await channel.connect(
+            host: host,
+            port: port,
+            key: key,
+            phoneId: await pairing.phoneId(),
+            phoneName: await _phoneName(),
+          );
+        } catch (e) {
+          channel.close();
+          continue;
+        }
+        _useWifi(channel, host);
+        return;
+      }
+    } finally {
+      _wifiBusy = false;
+    }
+  }
+
+  void _useWifi(WifiChannel channel, String host) {
+    _wifi = channel;
+    wifiActive = true;
+    // Bluetooth goes idle, so the radio is free for earphones.
+    _retry?.cancel();
+    _scanSub?.cancel();
+    FlutterBluePlus.stopScan().catchError((_) {});
+    final ble = _device;
+    _device = null;
+    _connSub?.cancel();
+    _valueSub?.cancel();
+    _commandChr = null;
+    ble?.disconnect().catchError((_) {});
+    markConnected('Connected over Wi-Fi ($host)');
+    () async {
+      await for (final message in channel.messages()) {
+        handlePacket(message);
+      }
+      if (_wifi != channel) return; // replaced or forgotten
+      _wifi = null;
+      wifiActive = false;
+      markLost('Wi-Fi link lost');
+      setLinkState(LinkState.reconnecting);
+      if (_running) _scan(); // Bluetooth takes over until Wi-Fi is back
+    }();
+  }
+
+  /// One-time pairing with the code from the Deskmate Hub menu. Returns an error message, or null.
+  Future<String?> pairWifi(String code, {String? host}) async {
+    final pairing = _pairing ??= await WifiPairing.load();
+    pairing.manualHost = host;
+    final hosts = (host != null && host.isNotEmpty) ? [(host, WifiChannel.port)] : await WifiChannel.discover();
+    if (hosts.isEmpty) {
+      return 'Couldn\'t find your computer on this network. Type its IP address (shown in the Deskmate Hub menu).';
+    }
+    try {
+      final (key, hubName) = await WifiChannel.pair(
+        host: hosts.first.$1,
+        port: hosts.first.$2,
+        code: code,
+        phoneId: await pairing.phoneId(),
+        phoneName: await _phoneName(),
+      );
+      await pairing.save(key, hubName);
+      logEvent('Paired over Wi-Fi with ${hubName ?? hosts.first.$1}');
+      notifyListeners();
+      unawaited(_tryWifi());
+      return null;
+    } on SocketException {
+      return 'Couldn\'t reach the computer at ${hosts.first.$1}. Check that both are on the same Wi-Fi.';
+    } catch (e) {
+      return e is String ? e : 'Pairing failed: $e';
+    }
+  }
+
+  /// Unpairs: back to Bluetooth only.
+  Future<void> forgetWifi() async {
+    await _pairing?.forget();
+    final wifi = _wifi;
+    _wifi = null;
+    final wasActive = wifiActive;
+    wifiActive = false;
+    wifi?.close();
+    if (wasActive) {
+      markLost('Wi-Fi forgotten');
+      setLinkState(LinkState.reconnecting);
+      if (_running) _scan();
+    }
+    notifyListeners();
   }
 
   Future<void> _write(BluetoothCharacteristic chr, Map<String, Object?> json) async {
@@ -293,6 +433,8 @@ class MacLink extends ChangeNotifier {
     _teardown();
     _adapterSub?.cancel();
     _watchdog?.cancel();
+    _wifiTimer?.cancel();
+    _wifi?.close();
     super.dispose();
   }
 }

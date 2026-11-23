@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
 import '../app/settings.dart';
+import '../ble/mac_link.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/widgets.dart';
 
@@ -18,6 +19,7 @@ class SettingsPage extends StatelessWidget {
   Widget build(BuildContext context) {
     final t = DeskmateTokens.of(context);
     final settings = AppScope.of(context).settings;
+    final link = AppScope.of(context).link;
 
     Widget card({required String title, required String note, required Widget child, EdgeInsets? padding}) => Container(
       padding: padding ?? const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -232,8 +234,13 @@ class SettingsPage extends StatelessWidget {
           row(
             'Time format',
             value(settings.use24h ? '24-hour' : '12-hour'),
-            last: true,
             onTap: () => settings.setUse24h(!settings.use24h),
+          ),
+          row(
+            'Wi-Fi link',
+            value(!link.wifiPaired ? 'Pair' : (link.wifiActive ? 'Connected' : 'Paired')),
+            last: true,
+            onTap: () => showDialog<void>(context: context, builder: (_) => _WifiDialog(link: link)),
           ),
         ],
       ),
@@ -362,6 +369,121 @@ class _LayoutThumb extends StatelessWidget {
         BentoCell(0, 1, b()),
         BentoCell(1, 1, b()),
         BentoCell(2, 1, b()),
+      ],
+    );
+  }
+}
+
+/// Pair with Deskmate Hub over Wi-Fi: type the 6-digit code from the Hub menu
+/// ("Pair a phone over Wi-Fi…"); the computer's IP is only needed when the network
+/// blocks automatic discovery.
+class _WifiDialog extends StatefulWidget {
+  const _WifiDialog({required this.link});
+  final MacLink link;
+
+  @override
+  State<_WifiDialog> createState() => _WifiDialogState();
+}
+
+class _WifiDialogState extends State<_WifiDialog> {
+  late final _code = TextEditingController();
+  late final _host = TextEditingController(text: widget.link.wifiManualHost ?? '');
+  bool _busy = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    _host.dispose();
+    super.dispose();
+  }
+
+  Future<void> _pair() async {
+    final code = _code.text.replaceAll(RegExp(r'\D'), '');
+    if (code.length != 6) return setState(() => _error = 'Enter the 6-digit code from the Deskmate Hub menu.');
+    setState(() {
+      _busy = true;
+      _error = null;
+    });
+    final error = await widget.link.pairWifi(code, host: _host.text.trim().isEmpty ? null : _host.text.trim());
+    if (!mounted) return;
+    if (error == null) return Navigator.pop(context);
+    setState(() {
+      _busy = false;
+      _error = error;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final t = DeskmateTokens.of(context);
+    final link = widget.link;
+    InputDecoration field(String label, String hint) => InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: t.ui(13, color: t.muted),
+      hintStyle: t.ui(13, color: t.muted),
+      filled: true,
+      fillColor: t.panel2,
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+    );
+    return AlertDialog(
+      backgroundColor: t.panel,
+      title: Text('Wi-Fi link', style: t.ui(16, weight: 600)),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (link.wifiPaired) ...[
+                Text(
+                  link.wifiActive
+                      ? 'Connected over Wi-Fi to ${link.wifiHubName ?? 'your computer'}. Bluetooth is idle.'
+                      : 'Paired with ${link.wifiHubName ?? 'your computer'}. Using Bluetooth until both are on the same Wi-Fi.',
+                  style: t.ui(13, color: t.muted),
+                ),
+              ] else ...[
+                Text(
+                  'On the computer, click the Deskmate Hub icon → "Pair a phone over Wi-Fi…" and type the code shown there. Both must be on the same network.',
+                  style: t.ui(13, color: t.muted),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _code,
+                  keyboardType: TextInputType.number,
+                  maxLength: 7,
+                  style: t.num(22),
+                  decoration: field('Pairing code', '123 456'),
+                ),
+                TextField(
+                  controller: _host,
+                  keyboardType: TextInputType.url,
+                  style: t.ui(14),
+                  decoration: field('Computer IP (optional)', 'Only if it isn\'t found, e.g. 192.168.1.20'),
+                ),
+              ],
+              if (_error != null) ...[const SizedBox(height: 10), Text(_error!, style: t.ui(13, color: t.bannerError))],
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        if (link.wifiPaired)
+          TextButton(
+            onPressed: () async {
+              await link.forgetWifi();
+              if (context.mounted) Navigator.pop(context);
+            },
+            child: Text('Forget', style: t.ui(14, color: t.bannerError)),
+          ),
+        TextButton(onPressed: () => Navigator.pop(context), child: Text('Close', style: t.ui(14, color: t.muted))),
+        if (!link.wifiPaired)
+          TextButton(
+            onPressed: _busy ? null : _pair,
+            child: Text(_busy ? 'Pairing…' : 'Pair', style: t.ui(14, weight: 600, color: t.clay)),
+          ),
       ],
     );
   }
