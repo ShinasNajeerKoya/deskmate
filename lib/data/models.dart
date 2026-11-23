@@ -226,10 +226,10 @@ class BoardData {
   MacBluetooth? bluetooth;
   MacWifi? wifi;
 
-  /// Last 5 minutes of CPU / memory pressure samples (one per sys message).
+  /// Last 5 minutes of CPU / memory pressure samples (one per sys message, every 2 s).
   final cpuHistory = <double>[];
   final memHistory = <double>[];
-  static const historyLength = 300;
+  static const historyLength = 150; // 5 minutes at one sample every 2 s
 
   /// Applies one message. Returns false for unknown topics.
   bool apply(Map<String, dynamic> j) {

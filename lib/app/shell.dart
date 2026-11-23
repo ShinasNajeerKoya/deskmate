@@ -64,18 +64,11 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (t) {
-      setState(() => _now = widget.link.now());
-      // While Control Center is open, ask the computer for a fresh Bluetooth scan every 30 s.
-      if (_page == PageId.control && t.tick % 30 == 0) widget.link.sendCommand('bt.scan');
-    });
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _now = widget.link.now()));
     widget.tour?.addListener(_followTour);
   }
 
-  void _go(PageId page) {
-    if (page == PageId.control && _page != PageId.control) widget.link.sendCommand('bt.scan');
-    setState(() => _page = page);
-  }
+  void _go(PageId page) => setState(() => _page = page);
 
   void _followTour() {
     final page = widget.tour!.step.page;

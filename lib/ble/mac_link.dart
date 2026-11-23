@@ -111,6 +111,12 @@ class MacLink extends ChangeNotifier {
     logEvent('Found Mac, connecting');
     try {
       await device.connect(timeout: const Duration(seconds: 15)); // requests MTU 512
+      // The computer's Bluetooth radio also streams your earphones' audio. A low-power
+      // connection (~100 ms between exchanges instead of ~30 ms) leaves it far more
+      // air time, so music doesn't stutter. Deskmate's updates easily fit in that.
+      try {
+        await device.requestConnectionPriority(connectionPriorityRequest: ConnectionPriority.lowPower);
+      } catch (_) {} // Android only
       _connSub = device.connectionState.listen((s) {
         if (s == BluetoothConnectionState.disconnected && _device == device) {
           drops++;

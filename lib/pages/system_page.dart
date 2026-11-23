@@ -3,6 +3,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
+import '../data/models.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/format.dart';
 import '../ui/widgets.dart';
@@ -120,7 +121,7 @@ class SystemPage extends StatelessWidget {
                 painter: _TrendPainter(
                   series: [(board.memHistory, t.lilac, 2.0), (board.cpuHistory, t.clay, 2.5)],
                   axis: t.divider,
-                  capacity: 300,
+                  capacity: BoardData.historyLength,
                 ),
               ),
             ),

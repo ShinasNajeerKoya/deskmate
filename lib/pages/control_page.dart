@@ -276,14 +276,17 @@ class ControlPage extends StatelessWidget {
           Padding(padding: const EdgeInsets.symmetric(vertical: 6), child: Container(height: 1, color: t.divider)),
           sectionHeader(
             'Nearby',
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Dot(color: (bt?.scanning ?? false) ? t.clay : t.muted),
-                const SizedBox(width: 6),
-                Text((bt?.scanning ?? false) ? 'Searching…' : 'Not searching', style: t.ui(13, color: t.muted)),
-              ],
-            ),
+            // Scanning briefly disturbs Bluetooth audio (earphones), so it only runs when asked.
+            (bt?.scanning ?? false)
+                ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Dot(color: t.clay),
+                    const SizedBox(width: 6),
+                    Text('Searching…', style: t.ui(13, color: t.muted)),
+                  ],
+                )
+                : smallButton('Search', t.panel2, t.text, () => link.sendCommand('bt.scan')),
           ),
           for (final d in nearby)
             deviceRow(d, smallButton('Pair', t.clay, t.clayInk, () => link.sendCommand('bt.pair:${d.id}'))),
