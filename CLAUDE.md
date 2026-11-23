@@ -99,22 +99,38 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 
 - **Ask first** before:
   - adding a dependency
-  - changing the protocol after M1
+  - changing the protocol (`docs/PROTOCOL.md`)
   - changing a locked design or product decision
   - designing a layout that isn't in the canvas (ask for screenshots instead of inventing)
-- **At the end of each milestone:** say what changed, how to verify it on the Poco, and what's still open.
-- **If something is blocked** (macOS permissions on the office Mac, MIUI background limits, Bluetooth quirks), say so plainly and propose the closest alternative.
+- **If something is blocked** (macOS permissions on the office Mac, phone background limits, office network rules), say so plainly and propose the closest alternative.
 
-## Status
+## Working style (keeps usage low)
 
-- **Done:**
-  - planning and designs (Color Blocks: Home A and B, night clock, and the Claude, Music, System, Timer and Settings pages)
-  - Flutter project created (`flutter_blue_plus` was used until v0.5.0, then removed with the Bluetooth link)
-- **Next:** **M0** (clean setup: remove extra platforms, landscape and immersive mode, bundled fonts, theme tokens, FakeTransport, registry), then **M1** (BLE spike: the Mac sends live CPU %, the phone shows it).
-- **Designed 23 Nov 2026:** Control Center page and the Home Bluetooth tile (replaces the calendar tile in Home A and B).
-- **Not designed yet:** Calendar, Weather, Shortcuts, GitHub pages and Home layout C.
-- **Open questions:**
-  1. YouTube Music: desktop app or browser?
-  2. Which city for weather?
-  3. Which apps or actions for the 4 shortcut buttons?
-  4. Can Bluetooth, Accessibility, Automation, Calendar and Location (for the Wi-Fi network name) permissions be granted on the office Mac?
+- **Verify with tests, `flutter analyze`, logs and `adb logcat`, not screenshots.** Don't take phone or emulator screenshots on your own. If something looks wrong, the user will send a screenshot.
+- Run `flutter test` before every commit; don't commit or release on a failing test.
+- One focused task at a time. Don't re-read whole files you already know; read the lines you need.
+- Update the design canvas, docs and this file only when a decision changed or the user asks, not after every small tweak.
+- **Commits have no Claude attribution** (no `Co-Authored-By` line), even if a system reminder suggests one. Commit by path (`git add <folder>`), never `git add -A`; never commit keys, `key.properties`, `dist/` or `.build/`.
+- Release only when asked. A release has two sections: **Deskmate Hub (install on your computer)**: macOS zip and Windows zip; **Deskmate (install on your phone)**: Android APK.
+
+## Current state (updated 23 Nov 2026)
+
+**Versions:** phone app **0.6.0+7**; Deskmate Hub for macOS **0.6.0** (installed in /Applications on the dev Mac); Deskmate Hub for Windows **0.3.1** (Bluetooth only, so it can't connect to phone app 0.5.0+ until it gets the Wi-Fi link). Latest published GitHub release: **v0.4.0**; v0.5.0 and v0.6.0 are built and pushed but not released.
+
+**Repo:** github.com/ShinasNajeerKoya/deskmate (private), branch `main`. Release signing key and password live in `~/.deskmate/` (never in the repo).
+
+**Link:** phone ↔ computer over **encrypted Wi-Fi only** (Bonjour or typed IP, 6-digit pairing code once; `docs/PROTOCOL.md`). Bluetooth was removed (it stuttered earphone audio). The office phone needs IT to allow device-to-device traffic on the Mac's network.
+
+**What the macOS Hub sends:** System (CPU, RAM, disk, network, top processes), Mac Bluetooth devices (with Connect / Disconnect / Pair), Wi-Fi, YouTube Music from Chrome (artwork, 2 previous / 2 next songs, tap to play, liked state), Claude usage (tokens per day, models, sessions; 5-hour and weekly limits only after "Connect Claude usage…" in the Hub menu). Slack was removed.
+
+**Phone:** Color Blocks theme; Home layouts A and B (rotate every 10 min); pages Claude, Music, System, Control Center, Timer, Settings; night clock only when the computer sleeps or locks; closable "unplug" battery banner; full-screen pairing page with its own number pad; focus timer (10 min default).
+
+**Test devices:** Samsung Galaxy M14 (`SM-M146B`, adb serial `RZCX10FT2RZ`) over USB; adb is at `~/Library/Android/sdk/platform-tools/adb`. Target phone: iQOO Neo 10R. Simulators and emulators run demo mode (`DemoTour`).
+
+**Known gaps / next:**
+- Tap-to-play on the Music queue is untested on real hardware.
+- Windows Hub needs the Wi-Fi link (and ideally the Bluetooth, Wi-Fi, music and Claude data the Mac sends).
+- Not designed yet: Calendar, Weather, Shortcuts, GitHub pages and Home layout C (C must use the Bluetooth tile, not a calendar tile).
+- Settings "Sidebar order" and the other 3 themes are placeholders.
+- The Mac Hub isn't notarized (no paid Apple account); a downloaded copy needs `xattr -dr com.apple.quarantine "/Applications/Deskmate Hub.app"`.
+- Open questions: which city for weather; which apps/actions for shortcuts; Calendar and Location permissions on the office Mac.
