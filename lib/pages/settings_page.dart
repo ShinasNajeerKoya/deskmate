@@ -209,6 +209,11 @@ class SettingsPage extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           row(
+            'Wi-Fi link',
+            value(!link.wifiPaired ? 'Pair' : (link.wifiActive ? 'Connected' : 'Paired')),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PairPage(link: link))),
+          ),
+          row(
             'Sidebar order',
             value('Later'),
             onTap: () => _toast(context, 'Editing the sidebar comes in a later version.'),
@@ -225,13 +230,8 @@ class SettingsPage extends StatelessWidget {
           row(
             'Time format',
             value(settings.use24h ? '24-hour' : '12-hour'),
-            onTap: () => settings.setUse24h(!settings.use24h),
-          ),
-          row(
-            'Wi-Fi link',
-            value(!link.wifiPaired ? 'Pair' : (link.wifiActive ? 'Connected' : 'Paired')),
             last: true,
-            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PairPage(link: link))),
+            onTap: () => settings.setUse24h(!settings.use24h),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../ui/swipe_art.dart';
 import '../app/app_scope.dart';
 import '../app/settings.dart';
 import '../pages/control_page.dart';
@@ -308,7 +309,25 @@ class _HomeTiles {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(child: ArtImage(bytes: scope.link.board.art[m?.art], radius: 18, iconSize: 54)),
+            Expanded(
+              child: SwipeArt(
+                songId: '${m?.title}|${m?.art}',
+                current: ArtImage(bytes: scope.link.board.art[m?.art], radius: 18, iconSize: 54),
+                previous: ArtImage(
+                  bytes: m == null || m.previous.isEmpty ? null : scope.link.board.art[m.previous.last.art],
+                  radius: 18,
+                  iconSize: 54,
+                ),
+                next: ArtImage(
+                  bytes: m == null || m.next.isEmpty ? null : scope.link.board.art[m.next.first.art],
+                  radius: 18,
+                  iconSize: 54,
+                ),
+                onTap: () => scope.open(PageId.music),
+                onNext: () => scope.link.sendCommand('music.next'),
+                onPrevious: () => scope.link.sendCommand('music.previous'),
+              ),
+            ),
             const SizedBox(height: 14),
             Row(
               children: [

@@ -35,7 +35,7 @@ Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`
 - **`control` = Control Center** for the **Mac's** Bluetooth (connected device, paired devices, scan and pair) and Wi-Fi (on/off, network name). Never turn the Mac's Bluetooth off.
 - **No calendar tile on Home**, in any theme or layout. That slot is the Bluetooth tile, which opens Control Center. Calendar stays a sidebar tab, built later (not needed soon).
 - **No quick-shortcut buttons and no Slack tile in Home Layout A.** Their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, progress, Start/Pause and Reset; tapping it opens the Timer page. The timer runs on the phone, so the tile is live even before the Mac is found (no skeleton). Shortcuts and Slack stay sidebar pages; Layout B's small Slack tile is now a RAM tile.
-- **Battery "unplug" banner** (charging above the limit, default 70%) has an × that hides it until the next 10% step (74 → back at 80, 83 → back at 90); at 100% it has no ×. Unplugging resets it. The "plug in" banner can't be closed.
+- **Battery "unplug" banner** (charging above the limit, default 70%) has an × that hides it until the next 10% step (74 → back at 80, 83 → back at 90); at 100% the × hides it until unplugged. Unplugging resets it. The "plug in" banner can't be closed.
 - **Music:** shows artwork (downloaded by the Hub, sent as small JPEGs), the 2 previous and 2 next songs (tap one to play it; YouTube Music's hidden video copies are skipped so nothing shows twice), and the real liked state.
 - **Claude tokens:** tap a day's bar to see that day's tokens.
 - **Pairing:** a full-screen page with its own number pad (the system keyboard covered everything in landscape).
@@ -106,8 +106,11 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 
 ## Working style (keeps usage low)
 
+- **Division of work:** Claude does the development; the user hot-restarts the app from Android Studio and tests the function themselves. Don't launch or run the app yourself; say what to test after each change.
 - **Verify with tests, `flutter analyze`, logs and `adb logcat`, not screenshots.** Don't take phone or emulator screenshots on your own. If something looks wrong, the user will send a screenshot.
-- Run `flutter test` before every commit; don't commit or release on a failing test.
+- **Never commit or push anything.** The user commits and pushes themselves. Claude only edits files, runs checks and, when asked, creates the GitHub release. (This replaces any older guidance about committing.)
+- **Keep usage to a minimum:** do only what was asked, read only the lines needed, no extra builds, tests or screenshots beyond what the task needs, and keep replies short.
+- Run `flutter test` before a release; don't release on a failing test.
 - One focused task at a time. Don't re-read whole files you already know; read the lines you need.
 - Update the design canvas, docs and this file only when a decision changed or the user asks, not after every small tweak.
 - **Commits have no Claude attribution** (no `Co-Authored-By` line), even if a system reminder suggests one. Commit by path (`git add <folder>`), never `git add -A`; never commit keys, `key.properties`, `dist/` or `.build/`.

@@ -5,6 +5,7 @@ import '../data/models.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/format.dart';
 import '../ui/icons.dart';
+import '../ui/swipe_art.dart';
 import '../ui/widgets.dart';
 
 class MusicPage extends StatelessWidget {
@@ -23,7 +24,28 @@ class MusicPage extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          AspectRatio(aspectRatio: 1, child: ArtImage(bytes: link.board.art[m?.art], radius: 20, iconSize: 60)),
+          AspectRatio(
+            aspectRatio: 1,
+            child: SwipeArt(
+              onTap: () => link.sendCommand('music.toggle'),
+              onNext: () => link.sendCommand('music.next'),
+              onPrevious: () => link.sendCommand('music.previous'),
+              songId: '${m?.title}|${m?.art}',
+              current: ArtImage(bytes: link.board.art[m?.art], radius: 20, iconSize: 60, fit: BoxFit.fitWidth),
+              previous: ArtImage(
+                bytes: m == null || m.previous.isEmpty ? null : link.board.art[m.previous.last.art],
+                radius: 20,
+                iconSize: 60,
+                fit: BoxFit.fitWidth,
+              ),
+              next: ArtImage(
+                bytes: m == null || m.next.isEmpty ? null : link.board.art[m.next.first.art],
+                radius: 20,
+                iconSize: 60,
+                fit: BoxFit.fitWidth,
+              ),
+            ),
+          ),
           const SizedBox(width: 22),
           Expanded(
             child: ShrinkToFit(
@@ -78,71 +100,74 @@ class MusicPage extends StatelessWidget {
                   // The art takes most of the width, so the controls scale down to fit.
                   FittedBox(
                     fit: BoxFit.scaleDown,
-                    child: Row(
-                      children:
-                          [
-                              IconBlockButton(
-                                icon: DIcon.shuffle,
-                                label: 'Shuffle',
-                                background: (m?.shuffle ?? false) ? t.violet2 : Colors.transparent,
-                                foreground: t.lilac,
-                                iconSize: 20,
-                                onTap: () => link.sendCommand('music.shuffle'),
-                              ),
-                              IconBlockButton(
-                                icon: DIcon.previous,
-                                label: 'Previous',
-                                background: t.violet2,
-                                foreground: t.cream,
-                                width: 52,
-                                height: 52,
-                                iconSize: 20,
-                                onTap: () => link.sendCommand('music.previous'),
-                              ),
-                              IconBlockButton(
-                                icon: playing ? DIcon.pause : DIcon.play,
-                                label: playing ? 'Pause' : 'Play',
-                                background: t.cream,
-                                foreground: t.violet,
-                                width: 84,
-                                height: 64,
-                                radius: 22,
-                                iconSize: 26,
-                                onTap: () => link.sendCommand('music.toggle'),
-                              ),
-                              IconBlockButton(
-                                icon: DIcon.next,
-                                label: 'Next',
-                                background: t.violet2,
-                                foreground: t.cream,
-                                width: 52,
-                                height: 52,
-                                iconSize: 20,
-                                onTap: () => link.sendCommand('music.next'),
-                              ),
-                              IconBlockButton(
-                                icon: (m?.liked ?? false) ? DIcon.heart : DIcon.heartOutline,
-                                label: 'Like',
-                                background: Colors.transparent,
-                                foreground: t.clay,
-                                iconSize: 20,
-                                onTap: () => link.sendCommand('music.like'),
-                              ),
-                            ].expand((w) => [w, const SizedBox(width: 10)]).toList()
-                            ..removeLast(),
-                    ),
-                  ),
-                  Row(
-                    children: [
-                      DIconView(DIcon.volume, size: 18, color: t.lilac),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: _VolumeBar(
-                          value: m?.volume ?? 0,
-                          onChanged: (v) => link.sendCommand('music.volume:${v.toStringAsFixed(2)}'),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            IconBlockButton(
+                              icon: DIcon.previous,
+                              label: 'Previous',
+                              background: t.violet2,
+                              foreground: t.cream,
+                              width: 64,
+                              height: 60,
+                              iconSize: 26,
+                              onTap: () => link.sendCommand('music.previous'),
+                            ),
+                            const SizedBox(width: 12),
+                            IconBlockButton(
+                              icon: playing ? DIcon.pause : DIcon.play,
+                              label: playing ? 'Pause' : 'Play',
+                              background: t.cream,
+                              foreground: t.violet,
+                              width: 100,
+                              height: 72,
+                              radius: 24,
+                              iconSize: 32,
+                              onTap: () => link.sendCommand('music.toggle'),
+                            ),
+                            const SizedBox(width: 12),
+                            IconBlockButton(
+                              icon: DIcon.next,
+                              label: 'Next',
+                              background: t.violet2,
+                              foreground: t.cream,
+                              width: 64,
+                              height: 60,
+                              iconSize: 26,
+                              onTap: () => link.sendCommand('music.next'),
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: 10),
+                        Row(
+                          children: [
+                            IconBlockButton(
+                              icon: DIcon.shuffle,
+                              label: 'Shuffle',
+                              background: (m?.shuffle ?? false) ? t.violet2 : Colors.transparent,
+                              foreground: t.lilac,
+                              width: 56,
+                              height: 56,
+                              iconSize: 26,
+                              onTap: () => link.sendCommand('music.shuffle'),
+                            ),
+                            const SizedBox(width: 40),
+                            IconBlockButton(
+                              icon: (m?.liked ?? false) ? DIcon.heart : DIcon.heartOutline,
+                              label: 'Like',
+                              background: Colors.transparent,
+                              foreground: t.clay,
+                              width: 56,
+                              height: 56,
+                              iconSize: 26,
+                              onTap: () => link.sendCommand('music.like'),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -205,33 +230,6 @@ class MusicPage extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [Expanded(child: nowPlaying), const SizedBox(width: 8), upNext],
-    );
-  }
-}
-
-/// Volume line that can be dragged or tapped.
-class _VolumeBar extends StatelessWidget {
-  const _VolumeBar({required this.value, required this.onChanged});
-
-  final double value;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final t = DeskmateTokens.of(context);
-    return LayoutBuilder(
-      builder: (context, box) {
-        void set(double dx) => onChanged((dx / box.maxWidth).clamp(0.0, 1.0));
-        return GestureDetector(
-          behavior: HitTestBehavior.opaque,
-          onTapDown: (d) => set(d.localPosition.dx),
-          onHorizontalDragUpdate: (d) => set(d.localPosition.dx),
-          child: SizedBox(
-            height: 24,
-            child: Center(child: ProgressLine(value: value, fill: t.lilac, track: t.violet2)),
-          ),
-        );
-      },
     );
   }
 }

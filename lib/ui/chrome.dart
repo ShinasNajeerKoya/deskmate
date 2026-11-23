@@ -137,12 +137,12 @@ Widget? connectionBanner(DeskmateTokens t, LinkState s, {VoidCallback? onPair}) 
 };
 
 /// Closing the unplug banner at [level] hides it until the next 10% step:
-/// 74 → back at 80, 83 → back at 90, 95 → back at 100 (which can't be closed).
+/// 74 → back at 80, 83 → back at 90, 95 → back at 100; closed at 100 → hidden until unplugged.
 int unplugSnoozeUntil(int level) => ((level ~/ 10) + 1) * 10;
 
 /// Battery warning for every page, or null.
 /// The "unplug" banner can be closed (until the next 10% step, see [unplugSnoozeUntil])
-/// except at 100%, where it stays until the charger is unplugged.
+/// including at 100% (then it stays hidden until the charger is unplugged).
 Widget? batteryBanner(
   DeskmateTokens t,
   int? level,
@@ -154,12 +154,12 @@ Widget? batteryBanner(
 }) {
   if (level == null) return null;
   if (charging && level >= high) {
-    if (level < 100 && snoozedUntil != null && level < snoozedUntil) return null;
+    if (snoozedUntil != null && level < snoozedUntil) return null;
     return InfoBanner(
       text: 'Battery at $level%. Unplug the charger.',
       color: t.butter,
       ink: t.butterInk,
-      onClose: level < 100 ? onClose : null,
+      onClose: onClose,
     );
   }
   if (!charging && level <= low) {

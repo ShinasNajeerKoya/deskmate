@@ -114,7 +114,7 @@ class FakeMacLink extends MacLink {
       case 'music.next':
         _skip(1);
       case 'music.previous':
-        _pos > 5 ? _pos = 0 : _skip(-1);
+        _skip(-1);
       case 'music.like':
         _liked = !_liked;
       case 'music.shuffle':
@@ -236,11 +236,11 @@ class FakeMacLink extends MacLink {
       'vol': _vol,
       'allLiked': true,
       'prev': [
-        for (var i = 2; i >= 1; i--)
+        for (var i = 1; i >= 1; i--)
           [_tracks[(_track - i) % _tracks.length].$1, _tracks[(_track - i) % _tracks.length].$2, i, ''],
       ],
       'next': [
-        for (var i = 1; i <= 2; i++)
+        for (var i = 1; i <= 3; i++)
           [_tracks[(_track + i) % _tracks.length].$1, _tracks[(_track + i) % _tracks.length].$2, 10 + i, ''],
       ],
     };

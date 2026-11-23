@@ -22,7 +22,7 @@ class SettingsController extends ChangeNotifier {
   int batteryLow = 30;
   int batteryHigh = 70;
   bool nightClock = true;
-  bool use24h = true;
+  bool use24h = false;
 
   SharedPreferences? _prefs;
 

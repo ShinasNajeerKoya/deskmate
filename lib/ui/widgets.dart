@@ -320,10 +320,11 @@ class LabelValue extends StatelessWidget {
 
 /// Album artwork from the computer, or a music-note placeholder while it hasn't arrived.
 class ArtImage extends StatelessWidget {
-  const ArtImage({super.key, required this.bytes, this.radius = 14, this.iconSize = 24});
+  const ArtImage({super.key, required this.bytes, this.radius = 14, this.iconSize = 24, this.fit = BoxFit.cover});
 
   final Uint8List? bytes;
   final double radius, iconSize;
+  final BoxFit fit;
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +338,7 @@ class ArtImage extends StatelessWidget {
                 color: t.violet2,
                 child: Center(child: DIconView(DIcon.music, size: iconSize, color: t.lilac, strokeWidth: 1.6)),
               )
-              : Image.memory(b, fit: BoxFit.cover, gaplessPlayback: true, filterQuality: FilterQuality.medium),
+              : Image.memory(b, fit: fit, gaplessPlayback: true, filterQuality: FilterQuality.medium),
     );
   }
 }

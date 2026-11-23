@@ -36,7 +36,14 @@ final class MusicCollector {
         switch command {
         case "music.toggle": js = "document.querySelector('#play-pause-button')?.click()"
         case "music.next": js = "document.querySelector('.next-button')?.click()"
-        case "music.previous": js = "document.querySelector('.previous-button')?.click()"
+        case "music.previous":
+            // YouTube Music's Previous button restarts the song when more than ~3 s in, so play
+            // the previous queue entry directly; fall back to the button if the queue isn't loaded.
+            js = "(()=>{const q=[...document.querySelectorAll('ytmusic-player-queue-item')].filter(x=>!x.closest('#counterpart-renderer'));"
+                + "const c=q.findIndex(x=>x.hasAttribute('selected'));"
+                + "if(c>0){const it=q[c-1]; (it.querySelector('ytmusic-play-button-renderer')||it).click(); return;}"
+                + "const v=document.querySelector('video'); if(v&&v.currentTime>3){v.currentTime=0;}"
+                + "setTimeout(()=>document.querySelector('.previous-button')?.click(),300);})()"
         case "music.like":
             js = "document.querySelector('ytmusic-player-bar ytmusic-like-button-renderer button[aria-label=\"Like\"]')?.click()"
         case "music.shuffle": js = "document.querySelector('ytmusic-player-bar .shuffle')?.click()"
@@ -92,7 +99,7 @@ final class MusicCollector {
 
     /// Reads the player state from the YouTube Music page and returns it as JSON text.
     /// The queue skips YouTube Music's hidden video copies (#counterpart-renderer), which
-    /// otherwise show every song twice; it returns the 2 songs before and 2 after the current one.
+    /// otherwise show every song twice; it returns the 1 song before and 3 after the current one.
     private static let readScript = """
     (() => {
       const v = document.querySelector('video');
@@ -114,8 +121,8 @@ final class MusicCollector {
           i, src
         ];
       };
-      const prev = cur > 0 ? items.slice(Math.max(0, cur - 2), cur).map((q, k) => entry(q, Math.max(0, cur - 2) + k)) : [];
-      const next = cur >= 0 ? items.slice(cur + 1, cur + 3).map((q, k) => entry(q, cur + 1 + k)) : [];
+      const prev = cur > 0 ? items.slice(Math.max(0, cur - 1), cur).map((q, k) => entry(q, Math.max(0, cur - 1) + k)) : [];
+      const next = cur >= 0 ? items.slice(cur + 1, cur + 4).map((q, k) => entry(q, cur + 1 + k)) : [];
       return JSON.stringify({
         title: md.title.slice(0, 48), artist: (md.artist || '').slice(0, 34), album: (md.album || '').slice(0, 34),
         playing: !!v && !v.paused, pos: v ? Math.floor(v.currentTime) : 0, dur: v && isFinite(v.duration) ? Math.floor(v.duration) : 0,
