@@ -2,13 +2,8 @@ import Foundation
 
 /// What the menu shows. Updated on the main thread by HubController.
 final class HubModel: ObservableObject {
-    enum Bluetooth { case starting, on, off, unauthorized, unsupported }
-
-    @Published var bluetooth: Bluetooth = .starting
     @Published var connected = false
     @Published var phoneName: String?
-    var blePhoneName: String?
-    @Published var overWifi = false
     /// Wi-Fi pairing code while pairing is open (2 minutes), and this Mac's IP for manual entry.
     @Published var pairingCode: String?
     @Published var localAddress: String?
@@ -20,15 +15,8 @@ final class HubModel: ObservableObject {
     @Published var problems: [String] = []
 
     var statusLine: String {
-        switch bluetooth {
-        case .starting: return "Starting…"
-        case .off: return "Bluetooth is off"
-        case .unauthorized: return "Bluetooth not allowed (System Settings → Privacy & Security → Bluetooth)"
-        case .unsupported: return "This Mac can't share data over Bluetooth LE"
-        case .on:
-            if connected { return "Connected to \(phoneName ?? "your phone")" + (overWifi ? " over Wi-Fi" : " over Bluetooth") }
-            return "Waiting for your phone…"
-        }
+        if connected { return "Connected to \(phoneName ?? "your phone") over Wi-Fi" }
+        return wifiPaired ? "Waiting for your phone on Wi-Fi…" : "No phone paired yet"
     }
 
     var version: String {

@@ -13,9 +13,9 @@
     <key>CFBundlePackageType</key>
     <string>APPL</string>
     <key>CFBundleShortVersionString</key>
-    <string>0.4.0</string>
+    <string>0.5.0</string>
     <key>CFBundleVersion</key>
-    <string>5</string>
+    <string>6</string>
     <key>LSMinimumSystemVersion</key>
     <string>13.0</string>
     <key>LSUIElement</key>
@@ -35,6 +35,6 @@
         <string>_deskmate._tcp</string>
     </array>
     <key>NSBluetoothAlwaysUsageDescription</key>
-    <string>Deskmate Hub sends live info from this Mac to the Deskmate app on your phone over Bluetooth.</string>
+    <string>Deskmate Hub lists this Mac's Bluetooth devices (like your earphones) on the Deskmate app, so you can connect or disconnect them from your phone.</string>
 </dict>
 </plist>

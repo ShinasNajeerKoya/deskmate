@@ -1,11 +1,10 @@
 import Foundation
 
-/// Wires the Bluetooth peripheral to the data collectors, each on its own schedule,
+/// Wires the Wi-Fi link to the data collectors, each on its own schedule,
 /// and routes the phone's commands. Data is only sent while a phone is connected,
 /// and slower-changing data only when it changes (to keep Bluetooth traffic light).
 final class HubController {
     let model = HubModel()
-    private let peripheral = Peripheral()
     private let system = SystemCollector()
     private let bluetooth = BluetoothCollector()
     private let wifi = WiFiCollector()
@@ -20,19 +19,12 @@ final class HubController {
     private var lastSent: [String: Data] = [:]
 
     func start() {
-        peripheral.onBluetooth = { [model] state in model.bluetooth = state }
-        peripheral.onPhonesChanged = { [weak self] _, name in
-            self?.model.blePhoneName = name
-            self?.updatePhones()
-        }
         wifiLink.onPhonesChanged = { [weak self] in self?.updatePhones() }
         wifiLink.onReady = { [weak self] in self?.sendEverything() }
         wifiLink.onCommand = { [weak self] command in self?.handle(command) }
         wifiLink.onPairingChanged = { [weak self] in self?.updatePairing() }
         wifiLink.start()
         if ProcessInfo.processInfo.environment["DESKMATE_TEST_PAIR_CODE"] != nil { wifiLink.beginPairing() }
-        peripheral.onSubscribed = { [weak self] in self?.sendEverything() }
-        peripheral.onCommand = { [weak self] command in self?.handle(command) }
         bluetooth.onChange = { [weak self] in self?.sendIfChanged(self?.bluetooth.message()) }
         wifi.onChange = { [weak self] in self?.sendIfChanged(self?.wifi.message()) }
         power = PowerMonitor { [weak self] asleep in
@@ -69,7 +61,7 @@ final class HubController {
         let timer = Timer(timeInterval: seconds, repeats: true) { [weak self] _ in
             guard let self else { return }
             self.refreshProblems()
-            guard self.peripheral.hasPhone || self.wifiLink.hasPhone else { return }
+            guard self.wifiLink.hasPhone else { return }
             action(self)
         }
         timer.tolerance = seconds * 0.1
@@ -139,19 +131,14 @@ final class HubController {
         broadcast(message)
     }
 
-    /// Sends to the phone over whichever link it uses (Wi-Fi preferred).
+    /// Sends to the phone over the encrypted Wi-Fi link.
     private func broadcast(_ message: [String: Any]) {
         wifiLink.send(message)
-        peripheral.send(message)
     }
 
     private func updatePhones() {
-        let wifi = wifiLink.hasPhone
-        // No Bluetooth advertising while the phone is on Wi-Fi: keeps the radio free for earphones.
-        peripheral.advertisingAllowed = !wifi
-        model.connected = wifi || peripheral.hasPhone
-        model.overWifi = wifi
-        model.phoneName = wifi ? wifiLink.phoneName : model.blePhoneName
+        model.connected = wifiLink.hasPhone
+        model.phoneName = wifiLink.phoneName
     }
 
     /// "Pair a phone over Wi-Fi…" in the menu.
