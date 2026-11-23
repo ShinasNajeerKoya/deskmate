@@ -9,7 +9,6 @@ final class HubController {
     private let bluetooth = BluetoothCollector()
     private let wifi = WiFiCollector()
     private let music = MusicCollector()
-    private let slack = SlackCollector()
     private let claude = ClaudeCollector()
     private let wifiLink = WifiServer()
     private var power: PowerMonitor?
@@ -17,6 +16,7 @@ final class HubController {
     private var seq = 0
     private var asleep = false
     private var lastSent: [String: Data] = [:]
+    private var sentArt: Set<String> = []
 
     func start() {
         wifiLink.onPhonesChanged = { [weak self] in self?.updatePhones() }
@@ -27,6 +27,7 @@ final class HubController {
         if ProcessInfo.processInfo.environment["DESKMATE_TEST_PAIR_CODE"] != nil { wifiLink.beginPairing() }
         bluetooth.onChange = { [weak self] in self?.sendIfChanged(self?.bluetooth.message()) }
         wifi.onChange = { [weak self] in self?.sendIfChanged(self?.wifi.message()) }
+        music.art.onReady = { [weak self] id in self?.sendArt(id) }
         power = PowerMonitor { [weak self] asleep in
             guard let self, self.asleep != asleep else { return }
             self.asleep = asleep
@@ -38,7 +39,6 @@ final class HubController {
         every(3) { $0.sendMusic() }
         every(5) { $0.sendIfChanged($0.bluetooth.message()) }
         every(10) { $0.sendIfChanged($0.wifi.message()) }
-        every(10) { $0.sendSlack() }
         every(30) { $0.sendClaude() }
         every(3600) { $0.sendTime() }
 
@@ -77,8 +77,8 @@ final class HubController {
         sendSystem()
         sendIfChanged(bluetooth.message())
         sendIfChanged(wifi.message())
+        sentArt.removeAll()
         sendMusic()
-        sendSlack()
         sendClaude()
     }
 
@@ -93,16 +93,26 @@ final class HubController {
 
     private func sendMusic() {
         music.read { [weak self] message in
+            guard let self else { return }
             // Nothing playing: send an empty music message once so the phone clears its tile.
-            self?.sendIfChanged(message ?? ["t": "music"])
+            self.sendIfChanged(message ?? ["t": "music"])
+            // Make sure the phone has every image this message refers to.
+            var ids: [String] = []
+            if let id = message?["art"] as? String { ids.append(id) }
+            for key in ["prev", "next"] {
+                for row in (message?[key] as? [[Any]]) ?? [] where row.count > 3 {
+                    if let id = row[3] as? String, !id.isEmpty { ids.append(id) }
+                }
+            }
+            ids.forEach(self.sendArt)
         }
     }
 
-    private func sendSlack() {
-        let unread = slack.unread()
-        var m: [String: Any] = ["t": "slack"]
-        if let unread { m["unread"] = unread }
-        sendIfChanged(m)
+    /// Sends one artwork image (base64 JPEG) once per connection.
+    private func sendArt(_ id: String) {
+        guard wifiLink.hasPhone, !sentArt.contains(id), let data = music.art.data(for: id) else { return }
+        sentArt.insert(id)
+        broadcast(["t": "art", "id": id, "d": data.base64EncodedString()])
     }
 
     private func sendClaude() {
@@ -166,7 +176,7 @@ final class HubController {
     }
 
     private func refreshProblems() {
-        model.problems = [music.problem, slack.problem].compactMap { $0 }
+        model.problems = [music.problem].compactMap { $0 }
     }
 
     /// Debugging: `DeskmateHub --dump` prints one message of each kind and exits.
@@ -179,7 +189,7 @@ final class HubController {
             print("\(d.count) B  \(String(decoding: d, as: UTF8.self))")
         }
         let system = SystemCollector(), bluetooth = BluetoothCollector(), wifi = WiFiCollector()
-        let music = MusicCollector(), slack = SlackCollector(), claude = ClaudeCollector()
+        let music = MusicCollector(), claude = ClaudeCollector()
         RunLoop.main.run(until: Date().addingTimeInterval(1.2))
         show(system.collect())
         show(bluetooth.message())
@@ -187,8 +197,6 @@ final class HubController {
         var done = 0
         music.read { show($0); print("music problem:", music.problem ?? "none"); done += 1 }
         claude.collect { show($0); done += 1 }
-        let unread = slack.unread()
-        print("slack unread:", unread.map(String.init) ?? "unknown", "·", slack.problem ?? "ok")
         print("claude setup:", ClaudeCollector.setup)
         while done < 2 { RunLoop.main.run(until: Date().addingTimeInterval(0.2)) }
         exit(0)
