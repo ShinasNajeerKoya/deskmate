@@ -8,6 +8,10 @@ final class HubModel: ObservableObject {
     @Published var connected = false
     @Published var phoneName: String?
     @Published var openAtLogin = LoginItem.isEnabled
+    @Published var claudeSetup: ClaudeCollector.Setup = .notConnected
+    @Published var claudeMessage: String?
+    /// Permissions or settings still needed for some data (shown as hints in the menu).
+    @Published var problems: [String] = []
 
     var statusLine: String {
         switch bluetooth {

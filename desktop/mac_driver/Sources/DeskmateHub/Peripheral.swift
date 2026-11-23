@@ -7,6 +7,8 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
     var onBluetooth: ((HubModel.Bluetooth) -> Void)?
     var onPhonesChanged: ((_ connected: Bool, _ name: String?) -> Void)?
     var onSubscribed: (() -> Void)?
+    var onCommand: ((String) -> Void)?
+    var hasPhone: Bool { !subscribers.isEmpty }
 
     private var manager: CBPeripheralManager!
     private let stats = CBMutableCharacteristic(
@@ -17,20 +19,40 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
     private var names: [UUID: String] = [:]
     private var latest = Data()
     private var pending: [Data] = []
+    private var partID = 0
 
     override init() {
         super.init()
         manager = CBPeripheralManager(delegate: self, queue: nil)
     }
 
-    /// Sends one JSON message to every subscribed phone.
+    /// Sends one JSON message to every subscribed phone. Messages larger than one
+    /// BLE packet are split into base64 parts: {"t":"part","id","i","n","d"}.
     func send(_ message: [String: Any]) {
         guard let data = try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys]) else { return }
         if message["t"] as? String == "sys" { latest = data }
         guard !subscribers.isEmpty else { return }
+        let maxLength = subscribers.map(\.maximumUpdateValueLength).min() ?? 20
+        if data.count <= maxLength {
+            enqueue(data)
+            return
+        }
+        partID = (partID + 1) % 10_000
+        let text = data.base64EncodedString()
+        let size = max(8, maxLength - 48)
+        let count = (text.count + size - 1) / size
+        for i in 0..<count {
+            let start = text.index(text.startIndex, offsetBy: i * size)
+            let end = text.index(start, offsetBy: min(size, text.distance(from: start, to: text.endIndex)))
+            let part: [String: Any] = ["t": "part", "id": partID, "i": i, "n": count, "d": String(text[start..<end])]
+            if let partData = try? JSONSerialization.data(withJSONObject: part) { enqueue(partData) }
+        }
+    }
+
+    private func enqueue(_ data: Data) {
         if !pending.isEmpty || !manager.updateValue(data, for: stats, onSubscribedCentrals: nil) {
             pending.append(data)
-            if pending.count > 20 { pending.removeFirst() }  // stale stats are worthless
+            if pending.count > 120 { pending.removeFirst(pending.count - 120) }
         }
     }
 
@@ -97,7 +119,9 @@ final class Peripheral: NSObject, CBPeripheralManagerDelegate {
                 names[request.central.identifier] = name
                 publishPhones()
             }
-            // Commands ("t":"cmd") are handled in a later version.
+            if json["t"] as? String == "cmd", let command = json["c"] as? String {
+                onCommand?(command)
+            }
         }
         if let first = requests.first { manager.respond(to: first, withResult: .success) }
     }

@@ -1,49 +1,111 @@
 import Foundation
 
-/// Wires the Bluetooth peripheral, CPU sampling, clock sync and sleep/wake together.
+/// Wires the Bluetooth peripheral to the data collectors, each on its own schedule,
+/// and routes the phone's commands. Data is only sent while a phone is connected,
+/// and slower-changing data only when it changes (to keep Bluetooth traffic light).
 final class HubController {
     let model = HubModel()
     private let peripheral = Peripheral()
-    private let cpu = CPUSampler()
+    private let system = SystemCollector()
+    private let bluetooth = BluetoothCollector()
+    private let wifi = WiFiCollector()
+    private let music = MusicCollector()
+    private let slack = SlackCollector()
+    private let claude = ClaudeCollector()
     private var power: PowerMonitor?
     private var timers: [Timer] = []
     private var seq = 0
     private var asleep = false
+    private var lastSent: [String: Data] = [:]
 
     func start() {
         peripheral.onBluetooth = { [model] state in model.bluetooth = state }
-        peripheral.onPhonesChanged = { [model] connected, name in
-            model.connected = connected
-            model.phoneName = connected ? name : nil
+        peripheral.onPhonesChanged = { [weak self] connected, name in
+            self?.model.connected = connected
+            self?.model.phoneName = connected ? name : nil
         }
-        peripheral.onSubscribed = { [weak self] in
-            self?.sendTime()
-            self?.sendPower()
-        }
+        peripheral.onSubscribed = { [weak self] in self?.sendEverything() }
+        peripheral.onCommand = { [weak self] command in self?.handle(command) }
+        bluetooth.onChange = { [weak self] in self?.sendIfChanged(self?.bluetooth.message()) }
+        wifi.onChange = { [weak self] in self?.sendIfChanged(self?.wifi.message()) }
         power = PowerMonitor { [weak self] asleep in
             guard let self, self.asleep != asleep else { return }
             self.asleep = asleep
             self.sendPower()
         }
-        _ = cpu.sample()  // prime the delta
 
-        // Live CPU once a second; clock sync hourly (and on every connection).
-        add(Timer(timeInterval: 1, repeats: true) { [weak self] _ in self?.sendCPU() })
-        add(Timer(timeInterval: 3600, repeats: true) { [weak self] _ in self?.sendTime() })
+        every(1) { $0.sendSystem() }
+        every(2) { $0.sendMusic() }
+        every(3) { $0.sendIfChanged($0.bluetooth.message()) }
+        every(5) { $0.sendIfChanged($0.wifi.message()) }
+        every(10) { $0.sendSlack() }
+        every(30) { $0.sendClaude() }
+        every(3600) { $0.sendTime() }
+
         LoginItem.enableOnFirstLaunch()
         model.openAtLogin = LoginItem.isEnabled
+        model.claudeSetup = ClaudeCollector.setup
     }
 
-    private func add(_ timer: Timer) {
-        timer.tolerance = 0.1
+    /// "Connect Claude usage…" in the menu.
+    func connectClaude() {
+        model.claudeMessage = ClaudeCollector.connect()
+        model.claudeSetup = ClaudeCollector.setup
+        sendClaude()
+    }
+
+    // MARK: Scheduling
+
+    private func every(_ seconds: TimeInterval, _ action: @escaping (HubController) -> Void) {
+        let timer = Timer(timeInterval: seconds, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            self.refreshProblems()
+            guard self.peripheral.hasPhone else { return }
+            action(self)
+        }
+        timer.tolerance = seconds * 0.1
         RunLoop.main.add(timer, forMode: .common)
         timers.append(timer)
     }
 
-    private func sendCPU() {
-        guard let value = cpu.sample() else { return }
+    /// A phone just connected: send the clock, power state and everything we know.
+    private func sendEverything() {
+        lastSent.removeAll()
+        sendTime()
+        sendPower()
+        sendSystem()
+        sendIfChanged(bluetooth.message())
+        sendIfChanged(wifi.message())
+        sendMusic()
+        sendSlack()
+        sendClaude()
+    }
+
+    // MARK: Senders
+
+    private func sendSystem() {
+        var m = system.collect()
         seq += 1
-        peripheral.send(["t": "sys", "seq": seq, "cpu": (value * 10).rounded() / 10])
+        m["seq"] = seq
+        peripheral.send(m)
+    }
+
+    private func sendMusic() {
+        music.read { [weak self] message in
+            // Nothing playing: send an empty music message once so the phone clears its tile.
+            self?.sendIfChanged(message ?? ["t": "music"])
+        }
+    }
+
+    private func sendSlack() {
+        let unread = slack.unread()
+        var m: [String: Any] = ["t": "slack"]
+        if let unread { m["unread"] = unread }
+        sendIfChanged(m)
+    }
+
+    private func sendClaude() {
+        claude.collect { [weak self] m in self?.sendIfChanged(m) }
     }
 
     /// Clock sync: the phone has no network time, so it uses the Mac's clock and time zone.
@@ -57,5 +119,56 @@ final class HubController {
 
     private func sendPower() {
         peripheral.send(["t": "power", "asleep": asleep])
+    }
+
+    /// Sends a message only if it differs from the last one of the same topic.
+    private func sendIfChanged(_ message: [String: Any]?) {
+        guard let message, let topic = message["t"] as? String,
+              let data = try? JSONSerialization.data(withJSONObject: message, options: [.sortedKeys]) else { return }
+        guard lastSent[topic] != data else { return }
+        lastSent[topic] = data
+        peripheral.send(message)
+    }
+
+    // MARK: Commands from the phone
+
+    private func handle(_ command: String) {
+        if command.hasPrefix("bt.") {
+            bluetooth.handle(command)
+        } else if command.hasPrefix("wifi.") {
+            wifi.handle(command)
+        } else if command.hasPrefix("music.") {
+            music.handle(command)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.sendMusic() }
+        }
+    }
+
+    private func refreshProblems() {
+        model.problems = [music.problem, slack.problem].compactMap { $0 }
+    }
+
+    /// Debugging: `DeskmateHub --dump` prints one message of each kind and exits.
+    static func dumpAndExit() -> Never {
+        func show(_ m: [String: Any]?) {
+            guard let m, let d = try? JSONSerialization.data(withJSONObject: m, options: [.sortedKeys]) else {
+                print("(none)")
+                return
+            }
+            print("\(d.count) B  \(String(decoding: d, as: UTF8.self))")
+        }
+        let system = SystemCollector(), bluetooth = BluetoothCollector(), wifi = WiFiCollector()
+        let music = MusicCollector(), slack = SlackCollector(), claude = ClaudeCollector()
+        RunLoop.main.run(until: Date().addingTimeInterval(1.2))
+        show(system.collect())
+        show(bluetooth.message())
+        show(wifi.message())
+        var done = 0
+        music.read { show($0); print("music problem:", music.problem ?? "none"); done += 1 }
+        claude.collect { show($0); done += 1 }
+        let unread = slack.unread()
+        print("slack unread:", unread.map(String.init) ?? "unknown", "·", slack.problem ?? "ok")
+        print("claude setup:", ClaudeCollector.setup)
+        while done < 2 { RunLoop.main.run(until: Date().addingTimeInterval(0.2)) }
+        exit(0)
     }
 }
