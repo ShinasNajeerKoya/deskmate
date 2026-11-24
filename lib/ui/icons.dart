@@ -9,7 +9,6 @@ enum DIcon {
   system('<path d="M22 12h-4l-3 9L9 3l-3 9H2"/>'),
   timer('<path d="M12 21a8 8 0 1 1 0-16 8 8 0 0 1 0 16zM12 9v4l2 2M10 2h4"/>'),
   calendar('<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>'),
-  slack('<path d="M4 9h16M4 15h16M10 3 8 21M16 3l-2 18"/>'),
   weather(
     '<path d="M12 2v2M4.93 4.93l1.41 1.41M20 12h2M19.07 4.93l-1.41 1.41M15.95 12.65a4 4 0 0 0-5.93-4.13"/>'
     '<path d="M13 22H7a5 5 0 1 1 4.9-6H13a3 3 0 0 1 0 6z"/>',
@@ -44,6 +43,8 @@ enum DIcon {
   shuffle('<path d="M16 3h5v5M4 20 21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/>'),
   volume('<path d="M11 5 6 9H2v6h4l5 4zM15.5 8.5a5 5 0 0 1 0 7"/>'),
   reset('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'),
+  chevronLeft('<path d="m15 18-6-6 6-6"/>'),
+  chevronRight('<path d="m9 18 6-6-6-6"/>'),
   // Filled glyphs
   previous('<path d="M19 20 9 12l10-8z" fill="currentColor"/><path d="M5 19V5"/>', filled: true),
   next('<path d="m5 4 10 8-10 8z" fill="currentColor"/><path d="M19 5v14"/>', filled: true),

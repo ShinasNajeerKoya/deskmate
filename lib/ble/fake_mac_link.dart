@@ -199,8 +199,15 @@ class FakeMacLink extends MacLink {
       ['Google Chrome', _r1(_cpu * 0.45)],
       ['Xcode', _r1(_cpu * 0.2)],
       ['Claude', _r1(_cpu * 0.14)],
-      ['Slack', _r1(_cpu * 0.07)],
+      ['Terminal', _r1(_cpu * 0.07)],
       ['WindowServer', _r1(_cpu * 0.05)],
+    ],
+    'mprocs': [
+      ['Google Chrome', 3418],
+      ['Xcode', 1520],
+      ['Claude', 880],
+      ['Terminal', 640],
+      ['Slack', 410],
     ],
   };
 
@@ -218,6 +225,9 @@ class FakeMacLink extends MacLink {
       'waiting': (_ticks ~/ 20).isOdd ? 1 : 0,
       'models': {'Opus': 0.64, 'Sonnet': 0.30, 'Haiku': 0.06},
       'tokens7d': [820000, 1310000, 610000, 1650000, 1120000, 480000, 1200000 + _ticks * 1500],
+      'b5Tokens': 1300000 + _ticks * 1500,
+      'b5StartHour': 9,
+      'b5Hours': [880000, 280000, 120000, 20000, _ticks * 1500],
     };
   }
 

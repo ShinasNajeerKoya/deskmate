@@ -107,10 +107,23 @@ class SystemPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Last 5 minutes', style: t.ui(12, weight: 600))),
-              legend(t.clay, 'CPU'),
-              const SizedBox(width: 12),
-              legend(t.lilac, 'Memory pressure'),
+              Expanded(
+                child: Text(
+                  'Last 5 minutes',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: t.ui(12, weight: 600),
+                ),
+              ),
+              const SizedBox(width: 8),
+              // The chart tile is narrower now (two process lists sit beside it): the legend scales down to fit.
+              Flexible(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerRight,
+                  child: Row(children: [legend(t.clay, 'CPU'), const SizedBox(width: 12), legend(t.lilac, 'Memory')]),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 10),
@@ -130,8 +143,8 @@ class SystemPage extends StatelessWidget {
       ),
     );
 
-    final procs = s?.procs ?? const [];
-    final top = Container(
+    // Two short lists: the 5 apps using the most CPU and the 5 using the most memory.
+    Widget procTile(String title, String unit, Color fill, List<(String, String, double)> rows) => Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(22)),
       child: Column(
@@ -139,39 +152,35 @@ class SystemPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text('Top processes', style: t.ui(12, weight: 600))),
-              Text('% CPU', style: t.ui(12, color: t.muted)),
+              Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(12, weight: 600))),
+              Text(unit, style: t.ui(12, color: t.muted)),
             ],
           ),
           const SizedBox(height: 4),
-          // Show as many processes as fit (up to 5).
+          // Show as many as fit.
           Expanded(
             child: LayoutBuilder(
               builder:
                   (context, box) => Column(
                     children: [
-                      for (final p in procs.take((box.maxHeight / 26).floor().clamp(0, 5)))
+                      for (final r in rows.take((box.maxHeight / 26).floor().clamp(0, rows.length)))
                         Padding(
                           padding: const EdgeInsets.only(top: 8),
                           child: Row(
                             children: [
                               Expanded(
-                                child: Text(p.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13)),
+                                child: Text(r.$1, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13)),
                               ),
-                              const SizedBox(width: 10),
+                              const SizedBox(width: 8),
                               SizedBox(
-                                width: 60,
-                                child: ProgressLine(
-                                  value: min(1, p.cpu / 20),
-                                  fill: t.clay,
-                                  track: t.panel2,
-                                  height: 5,
-                                ),
+                                width: 36,
+                                child: ProgressLine(value: r.$3, fill: fill, track: t.panel2, height: 5),
                               ),
                               SizedBox(
-                                width: 38,
+                                width: 48,
                                 child: Text(
-                                  '${p.cpu.round()}%',
+                                  r.$2,
+                                  maxLines: 1,
                                   textAlign: TextAlign.right,
                                   style: t.ui(13, color: t.muted),
                                 ),
@@ -187,6 +196,19 @@ class SystemPage extends StatelessWidget {
       ),
     );
 
+    final cpuRows = [
+      for (final p in (s?.procs ?? const <ProcStat>[]).take(5)) (p.name, '${p.cpu.round()}%', min(1.0, p.cpu / 20)),
+    ];
+    final mem = s?.memProcs ?? const <MemProc>[];
+    final totalMb = (s?.memTotalGb ?? 0) * 1024;
+    final biggest = mem.isEmpty ? 1 : mem.map((m) => m.mb).reduce(max);
+    final memRows = [
+      for (final m in mem.take(5))
+        (m.name, megabytes(m.mb), (totalMb > 0 ? m.mb / (totalMb * 0.25) : m.mb / biggest).clamp(0.02, 1.0)),
+    ];
+    final topCpu = procTile('Top CPU', '% CPU', t.clay, cpuRows);
+    final topMem = procTile('Top memory', 'RAM', t.lilac, memRows);
+
     return LayoutBuilder(
       builder:
           (context, box) => Column(
@@ -196,7 +218,13 @@ class SystemPage extends StatelessWidget {
               Expanded(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [Expanded(flex: 3, child: chart), const SizedBox(width: 8), Expanded(flex: 2, child: top)],
+                  children: [
+                    Expanded(flex: 5, child: chart),
+                    const SizedBox(width: 8),
+                    Expanded(flex: 3, child: topCpu),
+                    const SizedBox(width: 8),
+                    Expanded(flex: 3, child: topMem),
+                  ],
                 ),
               ),
             ],

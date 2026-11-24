@@ -1,5 +1,7 @@
 # Deskmate — kickoff prompt
 
+> **Superseded where it conflicts by `docs/EDGE_DESIGN_UPDATE_PROMPT.md`** (Edge theme, swipe-tab navigation, new tab order). `CLAUDE.md` wins over both on Slack (removed), the Wi-Fi-only link and "never commit".
+
 Paste everything below the line into Claude Code (in Cursor, opened in the `deskmate` folder) as your first message.
 
 ---
@@ -13,7 +15,7 @@ An old Android phone (Poco M2 Pro, Android 10–11, landscape only, **no SIM, no
 - YouTube Music, with controls
 - Mac system stats in an Activity Monitor style
 - a Control Center for the Mac's Bluetooth (earphones) and Wi-Fi
-- a focus timer, Slack counts, weather, shortcuts and GitHub, plus a calendar page later (not on Home)
+- a focus timer, weather, shortcuts and GitHub, plus a calendar page later (not on Home)
 
 The phone talks **only** to my Mac, over **Bluetooth Low Energy (BLE)**. My office IT won't let the phone join Wi-Fi, and I want no cables. When the Mac sleeps, the phone shows a dim night clock. When the Mac wakes, the board comes back.
 
@@ -33,7 +35,7 @@ deskmate/
 ```
 
 Delete the `linux/`, `macos/`, `web/` and `windows/` folders from the Flutter project. The phone app is Android only, and the Mac app is native Swift in `mac/`. Keep `ios/` only for testing the UI in the iOS Simulator (demo mode).
-On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout A has **no Slack tile**: their slots hold the Bluetooth tile and (Layout A) one wide 2 × 2 Timer tile. The focus timer defaults to 10 minutes.
+On Home there are **no calendar tile and no quick-shortcut buttons**: their slots hold the Bluetooth tile and (Layout A) one wide 2 × 2 Timer tile. The focus timer defaults to 10 minutes.
 
 ## 3. Non-negotiable constraints
 
@@ -42,7 +44,6 @@ On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout
   - Fonts must be **bundled as assets**. Don't use the `google_fonts` runtime fetching.
   - Weather, time sync and everything else come from the Mac.
 - **Bluetooth traffic:** Mac Bluetooth also drives my earphones, so keep BLE traffic light. Batch updates, send at most every 1–2 s for live stats, and keep album art to small JPEG thumbnails (about 96–128 px).
-- **Slack privacy:** counts only, never message text.
 - **No "updated X minutes ago" labels anywhere.**
 - **Flutter 3.29.1 / Dart 3.7.** Use `flutter_blue_plus` **pinned to 1.36.8**. Don't upgrade it without asking (see PROJECT_CONTEXT for why).
 - **Mac app:**
@@ -73,7 +74,7 @@ On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout
   - Long-press edit mode swaps tiles and saves the spec.
   - Rotation: every 10 min across the layouts the user picked in Settings. Picking exactly one locks it.
 - **Theming:**
-  - A `DeskTheme extends ThemeExtension` holds every colour, font family and radius, plus the semantic tile colours (claude, music, bluetooth, slack, system…).
+  - A `DeskTheme extends ThemeExtension` holds every colour, font family and radius, plus the semantic tile colours (claude, music, bluetooth, system…).
   - Widgets **never** hard-code colours or fonts.
   - Ship **Color Blocks** fully. Create the other three (**Graphite, Paper, Paper Blocks**) as token stubs, so the Settings theme picker already lists all four.
 - **Folder layout:**
@@ -81,7 +82,7 @@ On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout
   - `lib/core/` — theme, shared widgets (flip clock, tile, banner, skeleton), utils, logging
   - `lib/data/` — transport, protocol models, settings repository
   - `lib/features/<id>/` — one folder per feature: `page.dart`, `tiles.dart`, `providers.dart`
-  - Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `slack`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`
+  - Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`
   - Home has **no calendar tile**; its slot is the Bluetooth tile, which opens `control`.
 - **Diagnostics:** an in-app log ring buffer, plus Settings → Diagnostics showing link state, RSSI, MTU, protocol version, the last messages and app version. This is essential for debugging on a phone with no cable attached.
 - **Strings** live in one place, so they're l10n-ready even though English is the only language for now.
@@ -96,7 +97,6 @@ On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout
   - `BluetoothCollector`: IOBluetooth: the connected device, paired devices and scan results (never powers Bluetooth off)
   - `WiFiCollector`: CoreWLAN: on/off and network name (the name needs Location permission on macOS 14+)
   - `CalendarCollector`: EventKit (later; Calendar isn't needed soon)
-  - `SlackCollector`: dock badge
   - `WeatherCollector`: Open-Meteo, using a city from Settings
 - `Commands/`: media keys, shortcuts (open app or URL, run script) and lock screen. Only **allow-listed** commands; never run arbitrary strings sent from the phone.
 - `Power/SleepWakeMonitor.swift`: `NSWorkspace` sleep, wake, screen-lock and unlock notifications, which drive the phone's night clock.
@@ -129,7 +129,7 @@ On Home there are **no calendar tile and no quick-shortcut buttons**, and Layout
 | `claude` | every 30 s, plus at once when a session starts waiting |
 | `music` | on change; the phone animates progress locally between updates |
 | `bluetooth`, `wifi` | on change, and while scanning at most every 2 s |
-| `calendar`, `slack`, `weather` | on change, at most once a minute |
+| `calendar`, `weather` | on change, at most once a minute |
 | `art` | on track change |
 
 - **Commands:** `media.playPause`, `media.next`, `media.prev`, `media.like`, `media.volume{0-100}`, `shortcut.run{id}`, `mac.lock`, `bt.connect{id}`, `bt.disconnect{id}`, `bt.scan{on}`, `bt.pair{id}`, `wifi.power{on}`, `timer.*` (the timer itself runs on the phone). There's deliberately no command to power the Mac's Bluetooth off.
@@ -168,14 +168,14 @@ Always on: keep the screen awake with `wakelock_plus`, use immersive sticky mode
 - **M3 — States**
   - Connecting skeleton, reconnecting, Bluetooth off, battery banners, and the night clock with peek and brightness control.
 - **M4 — Designed pages**
-  - **Claude, Music, System, Control Center, Timer, Settings** (with the theme picker, layout lock, battery limits, Slack privacy, night clock toggle, time format and diagnostics), matching the designs.
+  - **Claude, Music, System, Control Center, Timer, Settings** (with the theme picker, layout lock, battery limits, night clock toggle, time format and diagnostics), matching the designs.
   - Then the real Mac collectors for each, replacing fake data topic by topic.
-- **M5 — Remaining features**, once they're designed: Slack, Weather, Shortcuts, GitHub and Home layout C; Calendar last (not needed soon).
+- **M5 — Remaining features**, once they're designed: Weather, Shortcuts, GitHub and Home layout C; Calendar last (not needed soon).
 - **M6 — Hardening**
   - A foreground service (`connectedDevice` type) to keep BLE alive, and autostart on boot.
   - `docs/PHONE_SETUP.md` (MIUI autostart, battery "no restrictions", lock in recents, developer options, no lock-screen PIN).
   - A 24-hour soak test, and a simple APK install flow (`adb install` or sideload).
-- **Phase 2:** the other 3 themes, Home tile resize, full Slack integration.
+- **Phase 2:** the other 3 themes, Home tile resize.
 
 ## 7. Designs
 

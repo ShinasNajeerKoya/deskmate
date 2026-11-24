@@ -38,7 +38,8 @@ final class SystemCollector {
             m["up"] = round1(up)
         }
         let procs = topProcesses()
-        if !procs.isEmpty { m["procs"] = procs }
+        if !procs.cpu.isEmpty { m["procs"] = procs.cpu }
+        if !procs.memory.isEmpty { m["mprocs"] = procs.memory }
         return m
     }
 
@@ -136,17 +137,19 @@ final class SystemCollector {
 
     // MARK: Processes
 
-    /// Top 5 processes by CPU (% of one core, like Activity Monitor), names shortened.
-    private func topProcesses() -> [[Any]] {
+    /// Top 5 processes by CPU (% of one core, like Activity Monitor) and top 5 by memory (resident MB),
+    /// names shortened. Helpers of the same app are added together.
+    private func topProcesses() -> (cpu: [[Any]], memory: [[Any]]) {
         let count = proc_listallpids(nil, 0)
-        guard count > 0 else { return [] }
+        guard count > 0 else { return ([], []) }
         var pids = [pid_t](repeating: 0, count: Int(count) + 32)
         let filled = proc_listallpids(&pids, Int32(pids.count * MemoryLayout<pid_t>.size))
-        guard filled > 0 else { return [] }
+        guard filled > 0 else { return ([], []) }
 
         let now = Date()
         var times: [pid_t: UInt64] = [:]
         var usage: [(String, Double)] = []
+        var resident: [String: UInt64] = [:]
         let elapsedNs = lastProcAt.map { now.timeIntervalSince($0) * 1_000_000_000 } ?? 0
 
         for pid in pids.prefix(Int(filled)) where pid > 0 {
@@ -155,9 +158,11 @@ final class SystemCollector {
             guard proc_pidinfo(pid, PROC_PIDTASKINFO, 0, &info, size) == size else { continue }
             let total = info.pti_total_user + info.pti_total_system
             times[pid] = total
+            let name = processName(pid)
+            resident[name, default: 0] += info.pti_resident_size
             guard elapsedNs > 0, let before = lastProcTimes[pid], total >= before else { continue }
             let percent = Double(total - before) * machTimeToNs / elapsedNs * 100
-            if percent >= 0.5 { usage.append((processName(pid), percent)) }
+            if percent >= 0.5 { usage.append((name, percent)) }
         }
         lastProcTimes = times
         lastProcAt = now
@@ -165,7 +170,10 @@ final class SystemCollector {
         // Merge helpers of the same app (e.g. "Google Chrome Helper (Renderer)" → "Google Chrome").
         var merged: [String: Double] = [:]
         for (name, value) in usage { merged[name, default: 0] += value }
-        return merged.sorted { $0.value > $1.value }.prefix(5).map { [String($0.key.prefix(24)), round1($0.value)] as [Any] }
+        let cpu = merged.sorted { $0.value > $1.value }.prefix(5).map { [String($0.key.prefix(24)), round1($0.value)] as [Any] }
+        let memory = resident.sorted { $0.value > $1.value }.prefix(5)
+            .map { [String($0.key.prefix(24)), Int(Double($0.value) / 1_048_576)] as [Any] }
+        return (cpu, memory)
     }
 
     private func processName(_ pid: pid_t) -> String {

@@ -2,9 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
 import '../app/settings.dart';
+import 'battery_dialog.dart';
 import 'pair_page.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/widgets.dart';
+
+/// Height of one setting row (as before the night clock toggle was removed).
+const _rowHeight = 47.0;
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -63,7 +67,7 @@ class SettingsPage extends StatelessWidget {
       child: Row(
         children: [
           for (final id in ThemeId.values) ...[
-            if (id != ThemeId.graphite) const SizedBox(width: 8),
+            if (id != ThemeId.values.first) const SizedBox(width: 8),
             Expanded(
               child: Semantics(
                 selected: settings.theme == id,
@@ -179,34 +183,18 @@ class SettingsPage extends StatelessWidget {
     Widget row(String label, Widget trailing, {bool last = false, VoidCallback? onTap}) => InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
+        height: _rowHeight,
+        alignment: Alignment.centerLeft,
         decoration: BoxDecoration(border: last ? null : Border(bottom: BorderSide(color: t.divider))),
         child: Row(children: [Expanded(child: Text(label, style: t.ui(13))), trailing]),
       ),
     );
     Widget value(String v) => Text('$v ›', style: t.ui(13, color: t.muted));
-    Widget toggle(String label, bool on, ValueChanged<bool> onChanged) => Semantics(
-      toggled: on,
-      label: label,
-      child: GestureDetector(
-        onTap: () => onChanged(!on),
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 160),
-          width: 44,
-          height: 26,
-          padding: const EdgeInsets.all(3),
-          alignment: on ? Alignment.centerRight : Alignment.centerLeft,
-          decoration: BoxDecoration(color: on ? t.clay : t.track, borderRadius: BorderRadius.circular(13)),
-          child: Dot(color: t.cream, size: 20),
-        ),
-      ),
-    );
-
     final prefs = Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
       decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(22)),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        mainAxisAlignment: MainAxisAlignment.start,
         children: [
           row(
             'Wi-Fi link',
@@ -221,11 +209,7 @@ class SettingsPage extends StatelessWidget {
           row(
             'Battery warnings',
             value('${settings.batteryLow}% · ${settings.batteryHigh}%'),
-            onTap: () => _editBattery(context, settings),
-          ),
-          row(
-            'Night clock when Mac sleeps',
-            toggle('Night clock when Mac sleeps', settings.nightClock, settings.setNightClock),
+            onTap: () => editBatteryWarnings(context, settings),
           ),
           row(
             'Time format',
@@ -237,13 +221,16 @@ class SettingsPage extends StatelessWidget {
       ),
     );
 
-    // Scrolls when the screen is too short to show everything.
-    const naturalHeight = 400.0;
+    // The settings keep their row height, so the card is as tall as its rows, and the Home layouts card
+    // beside it comes down to the same height. Scrolls when the screen is too short to show everything.
+    const prefsHeight = _rowHeight * 4 + 12;
+    const naturalHeight = 142.0 + 8 + prefsHeight;
     final page = Column(
       children: [
         SizedBox(height: 142, child: themes),
         const SizedBox(height: 8),
-        Expanded(
+        SizedBox(
+          height: prefsHeight,
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [Expanded(child: layouts), const SizedBox(width: 8), Expanded(child: prefs)],
@@ -258,56 +245,6 @@ class SettingsPage extends StatelessWidget {
                   ? page
                   : SingleChildScrollView(child: SizedBox(height: naturalHeight, child: page)),
     );
-  }
-
-  Future<void> _editBattery(BuildContext context, SettingsController settings) async {
-    final t = DeskmateTokens.of(context);
-    var range = RangeValues(settings.batteryLow.toDouble(), settings.batteryHigh.toDouble());
-    final result = await showDialog<RangeValues>(
-      context: context,
-      builder:
-          (context) => StatefulBuilder(
-            builder:
-                (context, setState) => AlertDialog(
-                  backgroundColor: t.panel,
-                  title: Text('Battery warnings', style: t.ui(16, weight: 600)),
-                  content: SizedBox(
-                    width: 360,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Plug in below ${range.start.round()}% · unplug above ${range.end.round()}%',
-                          style: t.ui(13, color: t.muted),
-                        ),
-                        RangeSlider(
-                          values: range,
-                          min: 10,
-                          max: 95,
-                          divisions: 17,
-                          activeColor: t.clay,
-                          inactiveColor: t.track,
-                          labels: RangeLabels('${range.start.round()}%', '${range.end.round()}%'),
-                          onChanged: (v) => setState(() => range = v),
-                        ),
-                      ],
-                    ),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: Text('Cancel', style: t.ui(14, color: t.muted)),
-                    ),
-                    TextButton(
-                      onPressed: () => Navigator.pop(context, range),
-                      child: Text('Save', style: t.ui(14, weight: 600, color: t.clay)),
-                    ),
-                  ],
-                ),
-          ),
-    );
-    if (result != null) settings.setBatteryLimits(result.start.round(), result.end.round());
   }
 }
 

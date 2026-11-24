@@ -21,7 +21,7 @@ final class ClaudeCollector {
     private struct FileState { var offset: UInt64 = 0; var lastKind = ""; var lastStop = "" }
     private var files: [URL: FileState] = [:]
     /// message id → (day start, model, tokens), deduplicated (one reply can span several log lines).
-    private var replies: [String: (day: Date, model: String, tokens: Int)] = [:]
+    private var replies: [String: (day: Date, at: Date, model: String, tokens: Int)] = [:]
     private let queue = DispatchQueue(label: "deskmate.claude")
 
     // MARK: Status line setup
@@ -35,6 +35,28 @@ final class ClaudeCollector {
         return command.contains("claude-statusline.sh") && command.contains("Deskmate") ? .connected : .otherStatusLine
     }
 
+    /// The status-line script. Claude Code also calls it at the start of a session, before it knows
+    /// the limits; those calls must not replace a good reading, so only input with `rate_limits` is kept.
+    static let statusScript = """
+    #!/bin/sh
+    # Deskmate: saves what Claude Code passes to its status line (incl. rate_limits) for Deskmate Hub.
+    dir="$HOME/Library/Application Support/Deskmate"
+    cat > "$dir/claude-status.json.tmp"
+    if grep -q '"rate_limits"' "$dir/claude-status.json.tmp"; then
+      mv "$dir/claude-status.json.tmp" "$dir/claude-status.json"
+    else
+      rm -f "$dir/claude-status.json.tmp"
+    fi
+
+    """
+
+    /// Brings an already-installed status-line script up to date (called on every launch).
+    static func refreshStatusScript() {
+        guard setup == .connected else { return }
+        try? statusScript.write(to: scriptFile, atomically: true, encoding: .utf8)
+        try? FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptFile.path)
+    }
+
     /// Installs the status-line script and points Claude Code at it.
     /// Backs up settings.json first; refuses if another status line is configured.
     static func connect() -> String? {
@@ -43,14 +65,7 @@ final class ClaudeCollector {
         }
         do {
             try FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
-            let script = """
-            #!/bin/sh
-            # Deskmate: saves what Claude Code passes to its status line (incl. rate_limits) for Deskmate Hub.
-            dir="$HOME/Library/Application Support/Deskmate"
-            cat > "$dir/claude-status.json.tmp" && mv "$dir/claude-status.json.tmp" "$dir/claude-status.json"
-
-            """
-            try script.write(to: scriptFile, atomically: true, encoding: .utf8)
+            try Self.statusScript.write(to: scriptFile, atomically: true, encoding: .utf8)
             try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: scriptFile.path)
 
             var settings = readSettings() ?? [:]
@@ -73,6 +88,95 @@ final class ClaudeCollector {
     private static func readSettings() -> [String: Any]? {
         guard let data = try? Data(contentsOf: settingsFile) else { return nil }
         return try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+    }
+
+
+    // MARK: Hooks (what each Claude Code session is doing)
+    //
+    // Claude Code runs this script on session events (also from the VS Code extension and the
+    // Claude app). It keeps one small file per session with its state, never any prompt text.
+
+    static let hookFile = supportDir.appendingPathComponent("claude-hook.sh")
+    static let sessionsDir = supportDir.appendingPathComponent("sessions")
+    static let hookEvents = ["SessionStart", "UserPromptSubmit", "PostToolUse", "Notification", "Stop", "SessionEnd"]
+
+    private static func hookGroups(_ settings: [String: Any], _ event: String) -> [[String: Any]] {
+        ((settings["hooks"] as? [String: Any])?[event] as? [[String: Any]]) ?? []
+    }
+
+    private static func isOurs(_ group: [String: Any]) -> Bool {
+        ((group["hooks"] as? [[String: Any]]) ?? []).contains { (($0["command"] as? String) ?? "").contains("claude-hook.sh") }
+    }
+
+    static var hooksInstalled: Bool {
+        guard let settings = readSettings() else { return false }
+        return hookEvents.allSatisfy { event in hookGroups(settings, event).contains(where: isOurs) }
+    }
+
+    /// Installs the hook script and adds our entries to ~/.claude/settings.json (other hooks stay).
+    /// Backs the file up first. Safe to call on every launch.
+    static func installHooks() {
+        do {
+            try FileManager.default.createDirectory(at: supportDir, withIntermediateDirectories: true)
+            let script = """
+            #!/bin/sh
+            # Deskmate: records what a Claude Code session is doing (state only, no prompt text) for Deskmate Hub.
+            [ -n "$DESKMATE_PING" ] && exit 0  # the background refresh isn't one of your sessions
+            dir="$HOME/Library/Application Support/Deskmate/sessions"
+            mkdir -p "$dir"
+            input=$(cat)
+            sid=$(printf '%s' "$input" | /usr/bin/plutil -extract session_id raw -o - - 2>/dev/null)
+            [ -z "$sid" ] && exit 0
+            case "$1" in
+              SessionEnd) rm -f "$dir/$sid.json"; exit 0 ;;
+              Stop|Notification) state=waiting ;;
+              SessionStart) state=idle ;;
+              *) state=working ;;
+            esac
+            printf '{"state":"%s","at":%s}' "$state" "$(date +%s)" > "$dir/$sid.json.tmp" && mv "$dir/$sid.json.tmp" "$dir/$sid.json"
+
+            """
+            try script.write(to: hookFile, atomically: true, encoding: .utf8)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: hookFile.path)
+            guard !hooksInstalled else { return }
+
+            var settings = readSettings() ?? [:]
+            if FileManager.default.fileExists(atPath: settingsFile.path) {
+                let backup = settingsFile.deletingLastPathComponent().appendingPathComponent("settings.json.deskmate-hooks-backup")
+                try? FileManager.default.removeItem(at: backup)
+                try FileManager.default.copyItem(at: settingsFile, to: backup)
+            }
+            var hooks = settings["hooks"] as? [String: Any] ?? [:]
+            for event in hookEvents {
+                var groups = hookGroups(settings, event)
+                if groups.contains(where: isOurs) { continue }
+                var group: [String: Any] = ["hooks": [["type": "command", "command": "\"\(hookFile.path)\" \(event)"]]]
+                if event == "PostToolUse" { group["matcher"] = "*" }
+                groups.append(group)
+                hooks[event] = groups
+            }
+            settings["hooks"] = hooks
+            let data = try JSONSerialization.data(withJSONObject: settings, options: [.prettyPrinted, .sortedKeys])
+            try data.write(to: settingsFile, options: .atomic)
+        } catch {
+            print("Couldn't install Claude hooks: \(error.localizedDescription)")
+        }
+    }
+
+    /// Sessions and how many wait for you, from the hook files. Files older than 2 hours are dropped
+    /// (a session that crashed never says goodbye).
+    private func hookSessions(now: Date) -> (count: Int, waiting: Int) {
+        let files = (try? FileManager.default.contentsOfDirectory(at: Self.sessionsDir, includingPropertiesForKeys: nil)) ?? []
+        var count = 0, waiting = 0
+        for file in files where file.pathExtension == "json" {
+            guard let data = try? Data(contentsOf: file),
+                  let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let at = json["at"] as? Double else { continue }
+            if now.timeIntervalSince1970 - at > 2 * 3600 { try? FileManager.default.removeItem(at: file); continue }
+            count += 1
+            if json["state"] as? String == "waiting" { waiting += 1 }
+        }
+        return (count, waiting)
     }
 
     // MARK: Collecting
@@ -116,34 +220,96 @@ final class ClaudeCollector {
         let total = max(1, perModel.values.reduce(0, +))
         m["models"] = Dictionary(uniqueKeysWithValues: perModel.filter { $0.value > 0 }.sorted { $0.value > $1.value }.prefix(3)
             .map { ($0.key, dec(Double($0.value) / Double(total), 2)) })
+        if Self.hooksInstalled {
+            let h = hookSessions(now: now)
+            active = h.count
+            waiting = h.waiting
+        }
         m["sessions"] = active
         m["waiting"] = waiting
 
-        // Limits from the status line (only present on subscription plans).
+        addLimits(to: &m, now: now, weekStart: weekStart)
+        return m
+    }
+
+    // MARK: Limits
+    //
+    // Percentages are Claude Code's own last reading from its status line (with its age). They can't be
+    // worked out from the session logs (the limit isn't a plain token count), so there is no estimate.
+    // Without a fresh reading the phone shows the 5-hour block from the logs: tokens, per-hour tokens
+    // and an approximate reset time.
+
+    private struct Reading { var pct: Double; var resetsAt: Double }
+
+    private func tokens(from: Date, to: Date) -> Int {
+        replies.values.reduce(0) { $0 + (($1.at >= from && $1.at < to) ? $1.tokens : 0) }
+    }
+
+    /// The current 5-hour block from the logs: it starts at the hour of a first message and lasts 5 hours.
+    private func logBlock(now: Date) -> (start: Date, tokens: Int)? {
+        let sorted = replies.values.sorted { $0.at < $1.at }
+        var start: Date?
+        var sum = 0
+        for r in sorted {
+            if start == nil || r.at >= start!.addingTimeInterval(5 * 3600) {
+                start = Date(timeIntervalSince1970: (r.at.timeIntervalSince1970 / 3600).rounded(.down) * 3600)
+                sum = 0
+            }
+            sum += r.tokens
+        }
+        guard let start, now < start.addingTimeInterval(5 * 3600) else { return nil }
+        return (start, sum)
+    }
+
+    private func addLimits(to m: inout [String: Any], now: Date, weekStart: Date) {
+        let nowSec = now.timeIntervalSince1970
+        var five: Reading?, week: Reading?
+        var statusAt: Date = .distantPast
         if let data = try? Data(contentsOf: Self.statusFile),
            let status = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
            let limits = status["rate_limits"] as? [String: Any] {
-            let nowSec = now.timeIntervalSince1970
-            if let h5 = limits["five_hour"] as? [String: Any], let pct = h5["used_percentage"] as? Double {
-                let reset = h5["resets_at"] as? Double ?? 0
-                if reset == 0 || reset > nowSec {
-                    m["h5"] = dec(pct)
-                    if reset > 0 { m["h5Reset"] = Int((reset - nowSec) / 60) }
-                }
+            statusAt = (try? Self.statusFile.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+            func reading(_ key: String) -> Reading? {
+                guard let o = limits[key] as? [String: Any], let pct = o["used_percentage"] as? Double else { return nil }
+                return Reading(pct: pct, resetsAt: o["resets_at"] as? Double ?? 0)
             }
-            if let wk = limits["seven_day"] as? [String: Any], let pct = wk["used_percentage"] as? Double {
-                let reset = wk["resets_at"] as? Double ?? 0
-                if reset == 0 || reset > nowSec {
-                    m["wk"] = dec(pct)
-                    if reset > 0 {
-                        let f = DateFormatter()
-                        f.dateFormat = "EEE"
-                        m["wkReset"] = f.string(from: Date(timeIntervalSince1970: reset))
-                    }
-                }
+            five = reading("five_hour")
+            week = reading("seven_day")
+        }
+
+        var windowStart: Date?, windowEnd: Date?, windowTokens = 0
+        if let f = five, f.resetsAt > nowSec {
+            m["h5"] = dec(f.pct)
+            m["readAge"] = max(0, Int(now.timeIntervalSince(statusAt) / 60))
+            windowStart = Date(timeIntervalSince1970: f.resetsAt - 5 * 3600)
+            windowEnd = Date(timeIntervalSince1970: f.resetsAt)
+            windowTokens = tokens(from: windowStart!, to: now)
+        } else if let block = logBlock(now: now) {
+            m["h5Est"] = true  // the reset time is approximate; there is no percentage
+            windowStart = block.start
+            windowEnd = block.start.addingTimeInterval(5 * 3600)
+            windowTokens = block.tokens
+        }
+        if let windowStart, let windowEnd {
+            m["h5Reset"] = max(0, Int(windowEnd.timeIntervalSince(now) / 60))
+            m["b5Tokens"] = windowTokens
+            m["b5StartHour"] = Calendar.current.component(.hour, from: windowStart)
+            m["b5Hours"] = (0..<5).map { i -> Int in
+                let from = windowStart.addingTimeInterval(Double(i) * 3600)
+                return tokens(from: from, to: min(from.addingTimeInterval(3600), now.addingTimeInterval(1)))
             }
         }
-        return m
+
+        if let w = week, w.resetsAt > nowSec {
+            m["wk"] = dec(w.pct)
+            m["readAge"] = max(0, Int(now.timeIntervalSince(statusAt) / 60))
+            let f = DateFormatter()
+            f.dateFormat = "EEE"
+            let resetDate = Date(timeIntervalSince1970: w.resetsAt)
+            m["wkReset"] = f.string(from: resetDate)
+            let c = Calendar.current.dateComponents([.hour, .minute], from: resetDate)
+            m["wkResetTime"] = (c.hour ?? 0) * 60 + (c.minute ?? 0)  // minutes after midnight, computer's time
+        }
     }
 
     private func logFiles(modifiedAfter date: Date) -> [URL] {
@@ -193,7 +359,7 @@ final class ClaudeCollector {
             let id = (message["id"] as? String) ?? (json["uuid"] as? String) ?? UUID().uuidString
             let tokens = ["input_tokens", "output_tokens", "cache_creation_input_tokens"]
                 .reduce(0) { $0 + ((usage[$1] as? Int) ?? 0) }
-            replies[id] = (Calendar.current.startOfDay(for: date), Self.modelName(message["model"] as? String), tokens)
+            replies[id] = (Calendar.current.startOfDay(for: date), date, Self.modelName(message["model"] as? String), tokens)
         }
         files[url] = state
     }

@@ -3,7 +3,7 @@ import 'dart:typed_data';
 
 // Data sent from the Mac. Every BLE message is UTF-8 JSON with a topic "t":
 //   {"t":"sys", ...}  {"t":"claude", ...}  {"t":"music", ...}
-//   {"t":"slack", ...}  {"t":"event", ...}  {"t":"power", ...}
+//   {"t":"event", ...}  {"t":"power", ...}
 // Fields are optional: the Mac sends what it has, the UI shows "—" for the rest.
 
 double? _d(Object? v) => (v as num?)?.toDouble();
@@ -13,6 +13,13 @@ class ProcStat {
   const ProcStat(this.name, this.cpu);
   final String name;
   final double cpu;
+}
+
+/// A process and its memory in MB (the Hub adds the helpers of one app together).
+class MemProc {
+  const MemProc(this.name, this.mb);
+  final String name;
+  final int mb;
 }
 
 class SystemStats {
@@ -29,6 +36,7 @@ class SystemStats {
     this.netDownKBs,
     this.netUpKBs,
     this.procs = const [],
+    this.memProcs = const [],
   });
 
   final double? cpu, memPct, memUsedGb, memTotalGb, diskMBs, diskFreeGb, netDownKBs, netUpKBs;
@@ -36,6 +44,7 @@ class SystemStats {
   final String? energy;
   final bool? onPower;
   final List<ProcStat> procs;
+  final List<MemProc> memProcs; // top apps by memory
 
   factory SystemStats.fromJson(Map<String, dynamic> j) => SystemStats(
     cpu: _d(j['cpu']),
@@ -51,6 +60,9 @@ class SystemStats {
     netUpKBs: _d(j['up']),
     procs: [
       for (final p in (j['procs'] as List? ?? const [])) ProcStat((p as List)[0] as String, (p[1] as num).toDouble()),
+    ],
+    memProcs: [
+      for (final p in (j['mprocs'] as List? ?? const [])) MemProc((p as List)[0] as String, (p[1] as num).toInt()),
     ],
   );
 }
@@ -71,6 +83,12 @@ class ClaudeUsage {
     this.waiting,
     this.models = const [],
     this.tokens7d = const [],
+    this.fiveHourEst = false,
+    this.readAgeMin,
+    this.weeklyResetTime,
+    this.blockTokens,
+    this.blockStartHour,
+    this.blockHours = const [],
   });
 
   final double? fiveHourPct, weeklyPct;
@@ -78,6 +96,19 @@ class ClaudeUsage {
   final String? weeklyReset; // e.g. "Thu"
   final List<ModelShare> models;
   final List<int> tokens7d; // oldest → today
+
+  /// True when the 5-hour reset time comes from the session logs (approximate), not Claude Code's own reading.
+  final bool fiveHourEst;
+
+  /// Minutes since Claude Code last wrote the exact 5-hour and weekly readings.
+  final int? readAgeMin;
+
+  /// The weekly reset's time of day, in minutes after midnight (the computer's clock).
+  final int? weeklyResetTime;
+
+  /// The current 5-hour block: tokens used, the local hour of its first bucket, tokens per hour.
+  final int? blockTokens, blockStartHour;
+  final List<int> blockHours;
 
   int? get tokensToday => tokens7d.isEmpty ? null : tokens7d.last;
 
@@ -93,6 +124,12 @@ class ClaudeUsage {
         ModelShare(e.key, (e.value as num).toDouble()),
     ],
     tokens7d: [for (final v in (j['tokens7d'] as List? ?? const [])) (v as num).toInt()],
+    fiveHourEst: j['h5Est'] == true,
+    readAgeMin: _i(j['readAge']),
+    weeklyResetTime: _i(j['wkResetTime']),
+    blockTokens: _i(j['b5Tokens']),
+    blockStartHour: _i(j['b5StartHour']),
+    blockHours: [for (final v in (j['b5Hours'] as List? ?? const [])) (v as num).toInt()],
   );
 }
 

@@ -107,6 +107,9 @@ TestLink linkWithData() {
 }
 
 void main() {
+  // The unplug banner is hidden in debug builds; these tests need it.
+  setUpAll(() => Shell.hideUnplugBanner = false);
+
   testWidgets('Home shows skeletons and the orange banner before the first connection', (tester) async {
     await pumpShell(tester, TestLink());
     expect(find.text('Looking for your computer on Wi-Fi…'), findsOneWidget);
@@ -304,7 +307,7 @@ void main() {
     }
   });
 
-  test('closing the unplug banner hides it until the next 10% step; 100% can\'t be closed', () {
+  test('closing the unplug banner hides it until the next 10% step; at 100% until unplugged', () {
     expect(unplugSnoozeUntil(74), 80);
     expect(unplugSnoozeUntil(80), 90);
     expect(unplugSnoozeUntil(95), 100);
@@ -314,6 +317,7 @@ void main() {
     expect(banner(74, null)?.onClose, isNotNull);
     expect(banner(78, 80), isNull);
     expect(banner(80, 80), isNotNull);
-    expect(banner(100, 100)?.onClose, isNull);
+    expect(banner(100, 100)?.onClose, isNotNull); // still closable at 100%
+    expect(banner(100, 110), isNull); // closed at 100%: stays hidden until unplugged
   });
 }

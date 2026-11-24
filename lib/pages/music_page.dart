@@ -53,7 +53,7 @@ class MusicPage extends StatelessWidget {
           const SizedBox(width: 22),
           Expanded(
             child: ShrinkToFit(
-              minHeight: 264,
+              minHeight: 284,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

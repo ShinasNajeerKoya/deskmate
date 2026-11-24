@@ -22,7 +22,9 @@ class ListeningTracker {
     _lastTick = now;
     // Clamp so a clock sync or a stalled tick can't add a jump.
     final delta =
-        previous == null ? Duration.zero : Duration(milliseconds: now.difference(previous).inMilliseconds.clamp(0, 3000));
+        previous == null
+            ? Duration.zero
+            : Duration(milliseconds: now.difference(previous).inMilliseconds.clamp(0, 3000));
 
     if (playing) {
       _pausedSince = null;

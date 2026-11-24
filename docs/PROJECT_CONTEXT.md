@@ -22,7 +22,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   collects stats, runs commands                                     all UI, sends control commands
 ```
 
-- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Since v0.3.0 the macOS Hub sends live System, Bluetooth devices, Wi-Fi, YouTube Music (Chrome) and Claude data (Slack was removed in v0.6.0); the Windows Hub sends System data only. One-time Mac setup for full data: Bluetooth (asked), Location (Wi-Fi name), Chrome → View → Developer → Allow JavaScript from Apple Events plus Automation (music), and "Connect Claude usage…" in the Hub menu (adds a status-line script to `~/.claude/settings.json`, with a backup; it never replaces an existing status line). Original planned responsibilities:
+- **Computer side: "Deskmate Hub"** (built 23 Nov 2026): `desktop/mac_driver/` (Swift menu-bar app) and `desktop/windows_driver/` (C# tray app, untested preview). Its own UI is only the connection status ("Connected to <phone name>"), Open at login and Quit; everything else is shown on the phone. It sends clock sync on every connection and hourly. Since v0.3.0 the macOS Hub sends live System, Bluetooth devices, Wi-Fi, YouTube Music (Chrome) and Claude data; the Windows Hub sends System data only. One-time Mac setup for full data: Bluetooth (asked), Location (Wi-Fi name), Chrome → View → Developer → Allow JavaScript from Apple Events plus Automation (music), and "Connect Claude usage…" in the Hub menu (adds a status-line script to `~/.claude/settings.json`, with a backup; it never replaces an existing status line). Original planned responsibilities:
   - BLE GATT server
   - sleep/wake detection
   - stat collection
@@ -46,7 +46,6 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 - **Calendar:** read from the Mac Calendar app (EventKit). **Not needed soon:** it's off Home (see below) and stays a sidebar tab to build later.
 - **Mac Bluetooth (Control Center):** through IOBluetooth: the connected device (e.g. earphones), paired devices, and nearby devices found by scanning. The phone can disconnect the current device, connect a paired one, and scan and pair a new one. **Never turn the Mac's Bluetooth off**, because that would cut the phone's own BLE link and the phone couldn't turn it back on.
 - **Mac Wi-Fi (Control Center):** through CoreWLAN: on/off and the network name. On macOS 14+ the network name needs Location permission for the Mac app; show "Wi-Fi" without a name if it's denied.
-- **Slack: removed for now** (23 Nov 2026: not needed). Original plan kept for later: **privacy mode**, so show counts only and never message text. v1 can read the Slack dock badge count. A full Slack app needs workspace admin approval.
 - **Weather:** fetched by the Mac and sent over (the phone has no internet).
 
 ## Behaviour
@@ -63,7 +62,8 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 
 ## UI structure
 
-- **Sidebar (left):**
+- **Navigation belongs to the theme (24 Nov 2026).** **Edge** (the new default once built): every page is a full-screen swipeable tab, with page dots at the bottom and no sidebar. Tab order: Home, Claude, Music, System, Control Center, Timer, Settings (last). **Color Blocks, Paper and Paper Blocks** keep the sidebar below. Switching theme in Settings animates the change (sidebar slides out and dots slide in, about 500 ms, or the reverse). Spec: `docs/EDGE_DESIGN_UPDATE_PROMPT.md`. Edge has one Home layout for now; the A/B/C rotation applies to the sidebar themes. On Edge, Settings is the theme previews with the settings (Wi-Fi link, tab order, battery warnings, time format) below them: no Home layouts and no night clock toggle. The sidebar themes keep the old Settings page, with the Home layouts and the other items (the night clock toggle is gone there too).
+- **Sidebar (left, sidebar themes only):**
   - a slim icon rail with labels that scrolls normally
   - **Settings pinned at the bottom**
   - tap to open a page, with no auto-scroll
@@ -80,14 +80,26 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - Every other page has **one layout only**.
 - **Clock:** a large flip-clock style, with digits on split square cards.
 - **Music tile:** previous, play/pause and next.
-- **No quick-shortcut buttons on Home, and no Slack tile in Layout A** (decided 23 Nov 2026). In Layout A their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, a progress line, Start/Pause and Reset; tapping it opens the Timer page. It works without the Mac, so it never shows as a skeleton. Shortcuts and Slack remain sidebar pages, and Layout B's small Slack tile is now a RAM tile. Every theme follows this.
+- **No quick-shortcut buttons on Home in Layout A** (decided 23 Nov 2026). In Layout A their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, a progress line, Start/Pause and Reset; tapping it opens the Timer page. It works without the Mac, so it never shows as a skeleton. Shortcuts remains a sidebar page, and Layout B's small tile is a RAM tile. Every theme follows this.
 - **Focus timer default: 10 minutes** ("Focus" preset). Presets: Short break 5, Long break 15, Focus 10, Deep work 50.
 
 ## Design (locked)
 
 - **Live designs (Claude design canvas):** https://claude.ai/artifact/A4YezfL5M982Eo9coC9Gs7
 - **Chosen theme for v1: "Color Blocks" (iteration 2).** Designed so far: Home A and B (with the Bluetooth tile), Night clock, and the Claude, Music, System, Timer, Settings and **Control Center** pages, plus the shared sidebar.
-- **Four themes are planned** (Settings → Theme): Graphite (1), **Color Blocks (2, default)**, Paper (3), Paper Blocks (4).
+- **Four themes** (Settings → Theme): **Edge (default once built)**, Color Blocks, Paper, Paper Blocks. Graphite was removed (24 Nov 2026); a saved Graphite theme migrates to Edge.
+- **Edge tokens** (borderless, dark, soft glows; Inter for UI, Outfit for numbers, weights 200–300 for big digits; both bundled):
+
+| Token | Value |
+|---|---|
+| bg | `#07090D` |
+| bgGlowTeal / bgGlowViolet | `rgba(44,140,150,0.22)` top left / `rgba(120,80,200,0.2)` bottom right (per-page glows come with the screens) |
+| text / textSoft / textMuted | `#EAF0F7` / `#9AA6B8` / `#7E8A9C` |
+| hairline / ringTrack | `rgba(255,255,255,0.08)` / `rgba(255,255,255,0.09)` |
+| clay / amber / teal | `#E07A4F` (Claude) / `#F2D16B` (weekly) / `#4FD1C5` (CPU) |
+| violet / mint / blue | `#A58BFF` (memory, music) / `#5ED3A4` (OK) / `#7FB2FF` (timer) |
+
+  - Rings: stroke 7–8, round caps. Dividers are 1 px hairlines, never boxes. Labels: 10–11 px uppercase with letter-spacing. Page dots: 6 px high; the active dot is a 22 px pill, the others 25% white circles.
   - Build the colours, fonts and corner sizes as **theme tokens** (ThemeExtension) from day one, so the other themes are just token swaps later.
 - **Color Blocks tokens:**
 
@@ -102,7 +114,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 | clay | `#E07A4F` | Claude, primary action, ink `#1A0F0A` |
 | violet | `#2A2440` / `#3C3460` | music, text `#C9BFF2` |
 | mint | `#BFE3CC` | Bluetooth / Control Center (and the Calendar page later), ink `#10261A` |
-| butter | `#F2D16B` | RAM tile on Home B (was Slack), ink `#2A2108` |
+| butter | `#F2D16B` | RAM tile on Home B, ink `#2A2108` |
 | ok | `#8FD6A8` | connected dot |
 
   - **Fonts:** DM Sans (UI) and Bricolage Grotesque (numbers and clock).
@@ -113,6 +125,6 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 
 ## Later (phase 2)
 
-- the other 3 themes
+- the Edge screens and shell, then Paper and Paper Blocks
+- an Edge Timer board and extra Edge Home layouts (ask before inventing)
 - Home tile drag-to-resize
-- a full Slack integration

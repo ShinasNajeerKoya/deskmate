@@ -20,14 +20,13 @@ Unknown topics and fields must be ignored on both sides.
 
 | `t` | Fields | When |
 |---|---|---|
-| `sys` | `seq`, `cpu`, `mem` (%), `memUsed`/`memTotal` (GB), `cores`, `energy`, `onPower`, `disk` (MB/s, macOS), `diskFree` (GB), `down`/`up` (KB/s), `procs` ([[name, %CPU] × 5]) | every 1 s |
+| `sys` | `seq`, `cpu`, `mem` (%), `memUsed`/`memTotal` (GB), `cores`, `energy`, `onPower`, `disk` (MB/s, macOS), `diskFree` (GB), `down`/`up` (KB/s), `procs` ([[name, %CPU] × 5]), `mprocs` ([[name, MB] × 5], top apps by memory; added v0.6.x, optional) | every 1 s |
 | `time` | `ts` (Unix ms), `tz` (UTC offset, minutes) | on connect, then hourly (clock sync) |
 | `power` | `asleep` (bool): sleep/lock = true, wake/unlock = false | on connect and on change |
 | `bluetooth` | `scanning`, `devices` [{`id`, `name`, `kind`, `connected`, `paired`}] | on change (checked every 3 s) — macOS |
 | `wifi` | `on`, `ssid` (needs Location permission) | on change (checked every 5 s) — macOS |
 | `music` | `title`, `artist`, `album`, `playing`, `pos`, `dur`, `vol`, `liked`, `shuffle`, `queue` [[title, artist]]; empty when nothing plays | on change (checked every 2 s) — macOS, YouTube Music in Chrome |
-| `claude` | `tokens7d`, `models` {name: share}, `sessions`, `waiting`; `h5`, `h5Reset` (min), `wk`, `wkReset` (weekday) once the status line is connected | on change (checked every 30 s) — macOS |
-| `slack` | `unread` (Dock badge; never message text) | on change (checked every 10 s) — macOS |
+| `claude` | `tokens7d`, `models` {name: share}, `sessions`, `waiting`; `h5` (%), `h5Reset` (min), `h5Est` (true = reset time worked out from the logs, approximate, and `h5` is absent), `wk` (%), `wkReset` (weekday), `wkResetTime` (minutes after midnight, computer's clock); `h5` and `wk` are Claude Code's own last status-line reading while its window lasts, never estimated, and `readAge` is that reading's age in minutes; `sessions` and `waiting` come from Claude Code hooks (one state file per session) once installed, else from the logs; the current 5-hour block: `b5Tokens`, `b5Hours` (5 tokens-per-hour values, oldest first), `b5StartHour` (computer's local hour of the first bucket). Added v0.6.x, all optional (older phones ignore them) | on change (checked every 5 s) — macOS |
 | `event` | `title`, `start` | planned (Calendar) |
 
 ## Phone → Hub (command)

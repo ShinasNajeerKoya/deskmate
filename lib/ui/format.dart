@@ -30,6 +30,10 @@ String longDate(DateTime d) => '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[
 String shortDateCaps(DateTime d) =>
     '${_weekdays[d.weekday - 1].substring(0, 3)} · ${d.day} ${_months[d.month - 1].substring(0, 3)}'.toUpperCase();
 
+/// "Mon 23 Nov"
+String dayMonthShort(DateTime d) =>
+    '${_weekdays[d.weekday - 1].substring(0, 3)} ${d.day} ${_months[d.month - 1].substring(0, 3)}';
+
 /// Single-letter weekday, "M".."S".
 String weekdayLetter(DateTime d) => _weekdays[d.weekday - 1][0];
 
@@ -62,6 +66,9 @@ String rate(double? kbs) {
   if (kbs == null) return '—';
   return kbs >= 1000 ? '${(kbs / 1000).toStringAsFixed(1)} MB/s' : '${kbs.round()} KB/s';
 }
+
+/// MB → "3.3 GB" / "512 MB"
+String megabytes(int mb) => mb >= 1024 ? '${(mb / 1024).toStringAsFixed(1)} GB' : '$mb MB';
 
 /// "Thu"
 String weekdayShort(DateTime d) => _weekdays[d.weekday - 1].substring(0, 3);

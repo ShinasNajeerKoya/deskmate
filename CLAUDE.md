@@ -32,9 +32,11 @@ Planned phone structure (brief, not done yet): `lib/app/`, `lib/core/`, `lib/dat
 
 Feature ids: `home`, `claude`, `music`, `system`, `control`, `timer`, `calendar`, `weather`, `shortcuts`, `github`, `settings`, `night_clock`.
 
+**Edge tab order:** `home` → `claude` → `music` → `system` → `control` → `timer` → `settings` (Settings always last). The Timer tab was added by the owner on 24 Nov 2026 and has its own Edge board (`Edge · Timer`) and screen (tick dial, presets, Start/Pause, Reset, session bars). Calendar, Weather, Shortcuts and GitHub stay in the registry but aren't Edge tabs yet.
+
 - **`control` = Control Center** for the **Mac's** Bluetooth (connected device, paired devices, scan and pair) and Wi-Fi (on/off, network name). Never turn the Mac's Bluetooth off.
 - **No calendar tile on Home**, in any theme or layout. That slot is the Bluetooth tile, which opens Control Center. Calendar stays a sidebar tab, built later (not needed soon).
-- **No quick-shortcut buttons and no Slack tile in Home Layout A.** Their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, progress, Start/Pause and Reset; tapping it opens the Timer page. The timer runs on the phone, so the tile is live even before the Mac is found (no skeleton). Shortcuts and Slack stay sidebar pages; Layout B's small Slack tile is now a RAM tile.
+- **No quick-shortcut buttons in Home Layout A.** Their slots (columns 5–6, rows 3–4) form one wide **Timer tile** (2 × 2): remaining time, progress, Start/Pause and Reset; tapping it opens the Timer page. The timer runs on the phone, so the tile is live even before the Mac is found (no skeleton). Shortcuts stays a sidebar page; Layout B's small tile is a RAM tile.
 - **Battery "unplug" banner** (charging above the limit, default 70%) has an × that hides it until the next 10% step (74 → back at 80, 83 → back at 90); at 100% the × hides it until unplugged. Unplugging resets it. The "plug in" banner can't be closed.
 - **Music:** shows artwork (downloaded by the Hub, sent as small JPEGs), the 2 previous and 2 next songs (tap one to play it; YouTube Music's hidden video copies are skipped so nothing shows twice), and the real liked state.
 - **Claude tokens:** tap a day's bar to see that day's tokens.
@@ -65,7 +67,8 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 - **The phone makes zero internet calls.** Its only network traffic is the encrypted Wi-Fi link to its own paired computer on the local network (`docs/PROTOCOL.md`).
   - Fonts are bundled assets; never use `google_fonts` runtime fetching.
   - Weather, time and all other data come from the Mac.
-- **No hard-coded colours, fonts or radii in widgets.** Read everything from `DeskTheme` (ThemeExtension). There are 4 themes: Graphite, **Color Blocks (default)**, Paper and Paper Blocks.
+- **No hard-coded colours, fonts or radii in widgets.** Read everything from `DeskTheme` (ThemeExtension). There are 4 themes: **Edge (default once built)**, Color Blocks, Paper and Paper Blocks. Graphite is removed. Until the Edge shell and screens ship, the running default is still Color Blocks (`ThemeId.defaultTheme`).
+- **Navigation style belongs to the theme.** Edge uses full-screen swipe tabs (one `PageView`) with page dots at the bottom and no sidebar; Color Blocks, Paper and Paper Blocks keep the sidebar. The phone never shows both. Switching theme in Settings animates the change (about 500 ms). Spec: `docs/EDGE_DESIGN_UPDATE_PROMPT.md`.
 - **The UI depends only on the `DeskTransport` interface**, never on BLE directly. Everything must work on `FakeTransport`.
 - **New pages go through the feature registry** (`FeatureDescriptor`). The sidebar, Home tiles and Settings read from it.
 - **Home layouts are data:** a 6×4 grid spec saved in settings. They aren't hand-built widget trees.
@@ -75,7 +78,6 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
   - Breaking changes bump `v` and need my approval.
   - Update `docs/PROTOCOL.md` in the same change.
 - **Keep BLE traffic light** (the Mac's earphones share Bluetooth): live stats at most every 1–2 s, album art as small JPEG thumbnails only.
-- **Slack: removed for now** (23 Nov 2026; no tile, page or Hub collector). If it comes back: counts only, never message text.
 - **No "updated X minutes ago" labels.**
 - **Phone ↔ computer link is Wi-Fi only** (encrypted, paired with a code; `docs/PROTOCOL.md`). Bluetooth was removed as a link in v0.5.0 (it made earphone audio stutter); don't re-add it without asking.
 - **Mac:**
@@ -124,9 +126,11 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 
 **Link:** phone ↔ computer over **encrypted Wi-Fi only** (Bonjour or typed IP, 6-digit pairing code once; `docs/PROTOCOL.md`). Bluetooth was removed (it stuttered earphone audio). The office phone needs IT to allow device-to-device traffic on the Mac's network.
 
-**What the macOS Hub sends:** System (CPU, RAM, disk, network, top processes), Mac Bluetooth devices (with Connect / Disconnect / Pair), Wi-Fi, YouTube Music from Chrome (artwork, 2 previous / 2 next songs, tap to play, liked state), Claude usage (tokens per day, models, sessions; 5-hour and weekly limits only after "Connect Claude usage…" in the Hub menu). Slack was removed.
+**What the macOS Hub sends:** System (CPU, RAM, disk, network, top 5 processes by CPU and top 5 apps by memory; the phone shows 5 and 5), Mac Bluetooth devices (with Connect / Disconnect / Pair), Wi-Fi, YouTube Music from Chrome (artwork, 2 previous / 2 next songs, tap to play, liked state), Claude usage (tokens per day, models, sessions; 5-hour and weekly limits only after "Connect Claude usage…" in the Hub menu).
 
 **Phone:** Color Blocks theme; Home layouts A and B (rotate every 10 min); pages Claude, Music, System, Control Center, Timer, Settings; night clock only when the computer sleeps or locks; closable "unplug" battery banner; full-screen pairing page with its own number pad; focus timer (10 min default).
+
+**Edge design update (24 Nov 2026, in progress):** Edge becomes the default theme (borderless, swipe tabs, bottom dots, no sidebar). Step 1 done: docs, Edge tokens, `NavStyle` and the settings migration (saved Graphite → Edge, schema 2). Built: Edge fonts (Inter, Outfit), the animated swipe-tab shell, and the Edge screens Home, Claude, Music, System, Control Center and Timer. Edge Settings (theme previews, then the settings below them: Wi-Fi link, tab order, battery warnings, time format; no Home layouts and no night clock toggle) is built; the sidebar themes keep the old Settings page with its items (also without the night clock toggle). Switching theme cross-fades the two Settings pages. All Edge screens exist now; making Edge the default is one line (`ThemeId.defaultTheme`). The prompt file's Bluetooth-link text and "make commits" lines are obsolete; this file wins. The Edge Timer board was designed on 24 Nov 2026 (canvas board `Edge · Timer`); the Timer tab sits between Control Center and Settings (7 dots).
 
 **Test devices:** Samsung Galaxy M14 (`SM-M146B`, adb serial `RZCX10FT2RZ`) over USB; adb is at `~/Library/Android/sdk/platform-tools/adb`. Target phone: iQOO Neo 10R. Simulators and emulators run demo mode (`DemoTour`).
 

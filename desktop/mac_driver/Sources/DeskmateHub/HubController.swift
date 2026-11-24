@@ -39,12 +39,14 @@ final class HubController {
         every(3) { $0.sendMusic() }
         every(5) { $0.sendIfChanged($0.bluetooth.message()) }
         every(10) { $0.sendIfChanged($0.wifi.message()) }
-        every(30) { $0.sendClaude() }
+        every(5) { $0.sendClaude() }
         every(3600) { $0.sendTime() }
 
         LoginItem.enableOnFirstLaunch()
         model.openAtLogin = LoginItem.isEnabled
         model.claudeSetup = ClaudeCollector.setup
+        ClaudeCollector.refreshStatusScript()
+        ClaudeCollector.installHooks()
         updatePairing()
     }
 

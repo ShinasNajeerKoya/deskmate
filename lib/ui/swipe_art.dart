@@ -86,10 +86,11 @@ class SwipeArtState extends State<SwipeArt> {
           behavior: HitTestBehavior.opaque,
           onTap: widget.onTap,
           onHorizontalDragStart: (_) => _fallback?.cancel(),
-          onHorizontalDragUpdate: (d) => setState(() {
-            _animate = false;
-            _dx = (_dx + d.delta.dx).clamp(-w, w);
-          }),
+          onHorizontalDragUpdate:
+              (d) => setState(() {
+                _animate = false;
+                _dx = (_dx + d.delta.dx).clamp(-w, w);
+              }),
           onHorizontalDragEnd: (d) => _end(d, w),
           onHorizontalDragCancel: _reset,
           child: ClipRect(

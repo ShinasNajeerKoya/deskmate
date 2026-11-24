@@ -390,7 +390,7 @@ class _HomeTiles {
     );
   }
 
-  /// Memory use (Slack's old slot in Layout B; Slack is off for now).
+  /// Memory use (a small tile in Layout B).
   Widget ramSmall() {
     if (_waiting) return const SkeletonTile();
     final s = scope.link.board.system;
@@ -495,7 +495,7 @@ class _HomeTiles {
   }
 
   /// Focus timer (2 × 2 in Layout A). It runs on the phone, so it works even
-  /// before the Mac is found. Replaces the old quick buttons and the Slack tile.
+  /// before the Mac is found. Replaces the old quick buttons.
   Widget focusTimer() {
     final timer = scope.timer;
     final secs = (timer.remaining.inMilliseconds / 1000).ceil();

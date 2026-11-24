@@ -151,9 +151,11 @@ Widget? batteryBanner(
   int high, {
   int? snoozedUntil,
   VoidCallback? onClose,
+  bool showUnplug = true,
 }) {
   if (level == null) return null;
   if (charging && level >= high) {
+    if (!showUnplug) return null;
     if (snoozedUntil != null && level < snoozedUntil) return null;
     return InfoBanner(
       text: 'Battery at $level%. Unplug the charger.',

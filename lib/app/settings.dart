@@ -17,7 +17,10 @@ enum HomeLayout {
 
 /// User settings, saved on the phone.
 class SettingsController extends ChangeNotifier {
-  ThemeId theme = ThemeId.colorBlocks;
+  /// Bump when saved data needs a migration. 2: Graphite theme removed (maps to Edge).
+  static const schemaVersion = 2;
+
+  ThemeId theme = ThemeId.defaultTheme;
   Set<HomeLayout> homeLayouts = {HomeLayout.a, HomeLayout.b};
   int batteryLow = 30;
   int batteryHigh = 70;
@@ -29,7 +32,13 @@ class SettingsController extends ChangeNotifier {
   Future<void> load() async {
     try {
       final p = _prefs = await SharedPreferences.getInstance();
-      theme = ThemeId.values.asNameMap()[p.getString('theme')] ?? theme;
+      final saved = ThemeId.fromSaved(p.getString('theme'));
+      theme = saved.available ? saved : ThemeId.defaultTheme;
+      if ((p.getInt('schema') ?? 1) < schemaVersion) {
+        // Keep the migrated choice (Graphite → Edge) even while Edge isn't selectable yet.
+        if (p.containsKey('theme')) await p.setString('theme', saved.name);
+        await p.setInt('schema', schemaVersion);
+      }
       final layouts = p.getStringList('homeLayouts');
       if (layouts != null) {
         final byName = HomeLayout.values.asNameMap();
