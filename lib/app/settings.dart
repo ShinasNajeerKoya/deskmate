@@ -11,8 +11,8 @@ enum HomeLayout {
   const HomeLayout(this.label);
   final String label;
 
-  /// Layout C isn't designed for Color Blocks yet.
-  bool get available => this != HomeLayout.c;
+  /// Layout C is designed for Paper only so far (Color Blocks gets it later).
+  bool availableIn(ThemeId theme) => this != HomeLayout.c || theme == ThemeId.paper;
 }
 
 /// User settings, saved on the phone.
@@ -44,7 +44,7 @@ class SettingsController extends ChangeNotifier {
         final byName = HomeLayout.values.asNameMap();
         final usable = {
           for (final n in layouts)
-            if (byName[n]?.available ?? false) byName[n]!,
+            if (byName[n] != null) byName[n]!,
         };
         if (usable.isNotEmpty) homeLayouts = usable;
       }
@@ -57,9 +57,18 @@ class SettingsController extends ChangeNotifier {
     }
   }
 
+  /// The layouts that rotate on the current theme (a saved Layout C is skipped where it isn't designed).
+  Set<HomeLayout> get activeLayouts {
+    final usable = {
+      for (final l in homeLayouts)
+        if (l.availableIn(theme)) l,
+    };
+    return usable.isEmpty ? {HomeLayout.a} : usable;
+  }
+
   /// Toggles a Home layout. At least one must stay selected (one = locked).
   void toggleLayout(HomeLayout l) {
-    if (!l.available) return;
+    if (!l.availableIn(theme)) return;
     final next = {...homeLayouts};
     if (!next.remove(l)) next.add(l);
     if (next.isEmpty) return;

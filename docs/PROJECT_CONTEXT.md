@@ -120,8 +120,12 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
   - **Fonts:** DM Sans (UI) and Bricolage Grotesque (numbers and clock).
   - **Radius:** 20–26 on tiles, 16 on buttons.
   - **Sidebar:** a floating rounded panel; the active item is a cream pill with dark text.
-- **Not designed yet:** Calendar, Weather, Shortcuts, GitHub pages and Home layout C (C must use the Bluetooth tile, not a calendar tile).
+- **Not designed yet:** Calendar, Weather, Shortcuts and GitHub pages (they are listed under Settings → Sidebar). Home layout C exists for the Paper theme only; Color Blocks gets it later (C must use the Bluetooth tile, not a calendar tile).
 - **The other themes' boards** (Graphite, Paper, Paper Blocks) on the canvas still show the old "Next up" tile. Replace it with the Bluetooth tile when designing those themes.
+
+## Paper theme (24 Nov 2026)
+
+Light and printed: warm paper background `#ECE9E2`, off-white cards `#FBFAF7` with a 1 px border `#DDD8CE`, dark ink `#1B1B1A` for the Claude, Timer and clock-band cards, muted text `#5F5C56`, accent orange `#E8572A`, green `#2F8A57`. Fonts Geist (UI) and Geist Mono (numbers and the small caps labels). Radius 14. Sidebar: the same floating rounded panel as Color Blocks (same size and layout) in paper colours; the active page is a dark pill, Settings apart at the bottom. Pages and layouts A, B and C follow the "Iteration 3 · Paper" row of the design canvas.
 
 ## Later (phase 2)
 

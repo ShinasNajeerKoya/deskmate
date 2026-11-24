@@ -154,7 +154,7 @@ void main() {
       'models': {'Opus': 0.6},
     });
     await pumpShell(tester, link);
-    for (final label in ['Claude', 'Music', 'System', 'Control', 'Timer', 'Calendar', 'Settings', 'Home']) {
+    for (final label in ['Claude', 'Music', 'System', 'Control', 'Timer', 'Settings', 'Home']) {
       await openPage(tester, label);
       expect(tester.takeException(), isNull, reason: label);
     }

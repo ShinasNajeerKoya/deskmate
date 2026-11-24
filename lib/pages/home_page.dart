@@ -29,7 +29,7 @@ class HomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scope = AppScope.of(context);
-    final layout = layoutAt(now, scope.settings.homeLayouts);
+    final layout = layoutAt(now, scope.settings.activeLayouts);
     final tiles = _HomeTiles(context, now);
     return AnimatedSwitcher(
       duration: const Duration(milliseconds: 600),

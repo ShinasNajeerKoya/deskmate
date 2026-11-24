@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
+import '../app/feature_registry.dart';
 import '../theme/deskmate_tokens.dart';
 import 'icons.dart';
 
@@ -28,11 +29,16 @@ class Rail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final t = DeskmateTokens.of(context);
-    final pages = PageId.values.where((p) => p != PageId.settings).toList();
+    final pages = sidebarPages();
     return Container(
       width: 66,
       padding: const EdgeInsets.symmetric(vertical: 8),
       decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(t.radiusRail)),
+      // Drawn over the panel so it takes no room (the same layout in every sidebar theme).
+      foregroundDecoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(t.radiusRail),
+        border: Border.all(color: t.border),
+      ),
       child: Column(
         children: [
           Expanded(
@@ -52,13 +58,13 @@ class Rail extends StatelessWidget {
 
   Widget _item(DeskmateTokens t, PageId page, {Color? idle}) {
     final on = page == active;
-    final fg = on ? t.creamInk : t.muted;
+    final fg = on ? t.railActiveInk : t.muted;
     return Semantics(
       selected: on,
       button: true,
       label: page.label,
       child: Material(
-        color: on ? t.cream : (idle ?? Colors.transparent),
+        color: on ? t.railActive : (idle ?? Colors.transparent),
         borderRadius: BorderRadius.circular(t.radiusButton),
         clipBehavior: Clip.antiAlias,
         child: InkWell(

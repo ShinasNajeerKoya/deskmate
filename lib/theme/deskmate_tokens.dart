@@ -60,7 +60,7 @@ enum ThemeId {
   final List<Color> preview;
 
   /// Edge is selectable as a preview: its shell works, its screens are still being built.
-  bool get available => this == ThemeId.colorBlocks || this == ThemeId.edge;
+  bool get available => this == ThemeId.colorBlocks || this == ThemeId.edge || this == ThemeId.paper;
 }
 
 /// Theme tokens. Widgets read every colour, font and radius from here and
@@ -119,6 +119,13 @@ class DeskmateTokens extends ThemeExtension<DeskmateTokens> {
     required this.glowClay,
     required this.glowPurple,
     required this.glowMint,
+    required this.border,
+    required this.ink,
+    required this.ink2,
+    required this.onInk,
+    required this.inkMuted,
+    required this.railActive,
+    required this.railActiveInk,
   });
 
   // Surfaces and text
@@ -146,6 +153,10 @@ class DeskmateTokens extends ThemeExtension<DeskmateTokens> {
   final Color amber, teal, blue, accentViolet;
   // Background glow colours (opaque; each page picks its own strength and position, see EdgeGlow).
   final Color glowTeal, glowViolet, glowClay, glowPurple, glowMint;
+  // Paper: the thin border of a card, and the dark "ink" cards (Claude, Timer, Home clock band) with their text.
+  final Color border, ink, ink2, onInk, inkMuted;
+  // The sidebar's page in use: its fill and its icon and text.
+  final Color railActive, railActiveInk;
 
   static const colorBlocks = DeskmateTokens(
     bg: Color(0xFF0F0F10),
@@ -201,6 +212,77 @@ class DeskmateTokens extends ThemeExtension<DeskmateTokens> {
     glowClay: Color(0xFFE07A4F),
     glowPurple: Color(0xFF7A4DD8),
     glowMint: Color(0xFF5ED3A4),
+    border: Color(0x00000000),
+    ink: Color(0xFF141414),
+    ink2: Color(0xFF26262A),
+    onInk: Color(0xFFF3EEE6),
+    inkMuted: Color(0xFFA5A39E),
+    railActive: Color(0xFFF3EEE6),
+    railActiveInk: Color(0xFF141414),
+  );
+
+  /// Paper: warm paper, off-white cards with a thin border, a dark ink card, Geist and Geist Mono.
+  static const paper = DeskmateTokens(
+    bg: Color(0xFFECE9E2),
+    panel: Color(0xFFFBFAF7),
+    panel2: Color(0xFFECE9E2),
+    divider: Color(0xFFDDD8CE),
+    track: Color(0xFFDDD8CE),
+    text: Color(0xFF1B1B1A),
+    muted: Color(0xFF5F5C56),
+    cream: Color(0xFFFBFAF7),
+    cream2: Color(0xFF1B1B1A),
+    creamInk: Color(0xFFFBFAF7),
+    creamMuted: Color(0xFF5F5C56),
+    clay: Color(0xFFE8572A),
+    clayInk: Color(0xFFFBFAF7),
+    violet: Color(0xFF2A2440),
+    violet2: Color(0xFF3C3460),
+    lilac: Color(0xFFC9BFF2),
+    mint: Color(0xFFBFE3CC),
+    mintInk: Color(0xFF10261A),
+    butter: Color(0xFFF2D16B),
+    butterInk: Color(0xFF2A2108),
+    ok: Color(0xFF2F8A57),
+    nightBg: Color(0xFF000000),
+    nightHour: Color(0xFF8C6A4E),
+    nightMinute: Color(0xFF6E685E),
+    nightDots: Color(0xFF3A2A1E),
+    nightLabel: Color(0xFF8A8378),
+    // Banner colours aren't in the locked design yet: orange = clay, blue and
+    // red are placeholders picked to sit with the palette.
+    bannerConnecting: Color(0xFFE07A4F),
+    bannerConnectingInk: Color(0xFF1A0F0A),
+    bannerReconnecting: Color(0xFF9CC3F0),
+    bannerReconnectingInk: Color(0xFF0E1F33),
+    bannerError: Color(0xFFF08A80),
+    bannerErrorInk: Color(0xFF2B0D0A),
+    uiFont: 'Geist',
+    numFont: 'Geist Mono',
+    radiusTileLarge: 14,
+    radiusTile: 14,
+    radiusButton: 16,
+    radiusRail: 22,
+    radiusDigit: 10,
+    textSoft: Color(0xFF5F5C56),
+    hairline: Color(0xFFDDD8CE),
+    ringTrack: Color(0xFFDDD8CE),
+    amber: Color(0xFF1B1B1A),
+    teal: Color(0xFFE8572A),
+    blue: Color(0xFFE8572A),
+    accentViolet: Color(0xFF1B1B1A),
+    glowTeal: Color(0xFF2C8C96),
+    glowViolet: Color(0xFF7850C8),
+    glowClay: Color(0xFFE07A4F),
+    glowPurple: Color(0xFF7A4DD8),
+    glowMint: Color(0xFF5ED3A4),
+    border: Color(0xFFDDD8CE),
+    ink: Color(0xFF1B1B1A),
+    ink2: Color(0xFF2C2B29),
+    onInk: Color(0xFFFBFAF7),
+    inkMuted: Color(0xFFB9B5AC),
+    railActive: Color(0xFF1B1B1A),
+    railActiveInk: Color(0xFFFBFAF7),
   );
 
   /// Edge: borderless, dark, with soft glows. Panels and radii are reused from Color Blocks
@@ -259,9 +341,20 @@ class DeskmateTokens extends ThemeExtension<DeskmateTokens> {
     glowClay: Color(0xFFE07A4F),
     glowPurple: Color(0xFF7A4DD8),
     glowMint: Color(0xFF5ED3A4),
+    border: Color(0x00000000),
+    ink: Color(0xFF141414),
+    ink2: Color(0xFF26262A),
+    onInk: Color(0xFFF3EEE6),
+    inkMuted: Color(0xFFA5A39E),
+    railActive: Color(0xFFF3EEE6),
+    railActiveInk: Color(0xFF141414),
   );
 
-  static DeskmateTokens forTheme(ThemeId id) => id == ThemeId.edge ? edge : colorBlocks;
+  static DeskmateTokens forTheme(ThemeId id) => switch (id) {
+    ThemeId.edge => edge,
+    ThemeId.paper => paper,
+    _ => colorBlocks,
+  };
 
   static DeskmateTokens of(BuildContext context) => Theme.of(context).extension<DeskmateTokens>()!;
 

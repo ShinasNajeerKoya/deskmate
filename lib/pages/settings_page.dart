@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../app/app_scope.dart';
 import '../app/settings.dart';
 import 'battery_dialog.dart';
+import 'sidebar_page.dart';
 import 'pair_page.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/widgets.dart';
@@ -33,10 +34,17 @@ class SettingsPage extends StatelessWidget {
         children: [
           Row(
             children: [
-              Expanded(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 600))),
+              Flexible(child: Text(title, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, weight: 600))),
               const SizedBox(width: 8),
-              Flexible(
-                child: Text(note, maxLines: 1, overflow: TextOverflow.ellipsis, style: t.ui(13, color: t.muted)),
+              // The note sits at the end of the row.
+              Expanded(
+                child: Text(
+                  note,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.right,
+                  style: t.ui(13, color: t.muted),
+                ),
               ),
             ],
           ),
@@ -129,7 +137,9 @@ class SettingsPage extends StatelessWidget {
                         radius: 14,
                         selected: settings.homeLayouts.contains(l),
                         onTap: () {
-                          if (!l.available) return _toast(context, 'Layout C isn\'t designed for this theme yet.');
+                          if (!l.availableIn(settings.theme)) {
+                            return _toast(context, 'Layout C isn\'t designed for this theme yet.');
+                          }
                           if (settings.homeLayouts.length == 1 && settings.homeLayouts.contains(l)) {
                             return _toast(context, 'Keep at least one layout.');
                           }
@@ -151,7 +161,9 @@ class SettingsPage extends StatelessWidget {
                                   ),
                                 ),
                                 Text(
-                                  !l.available ? 'Later' : (settings.homeLayouts.contains(l) ? '✓' : 'Off'),
+                                  !l.availableIn(settings.theme)
+                                      ? 'Later'
+                                      : (settings.homeLayouts.contains(l) ? '✓' : 'Off'),
                                   style: t.ui(
                                     12,
                                     weight: 600,
@@ -202,9 +214,9 @@ class SettingsPage extends StatelessWidget {
             onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => PairPage(link: link))),
           ),
           row(
-            'Sidebar order',
-            value('Later'),
-            onTap: () => _toast(context, 'Editing the sidebar comes in a later version.'),
+            'Sidebar',
+            value(''),
+            onTap: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const SidebarPage())),
           ),
           row(
             'Battery warnings',

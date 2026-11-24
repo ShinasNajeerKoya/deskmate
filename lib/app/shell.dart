@@ -9,6 +9,13 @@ import '../pages/claude_page.dart';
 import '../pages/control_page.dart';
 import '../pages/edge/edge_claude.dart';
 import '../pages/edge/edge_control.dart';
+import '../pages/paper/paper_claude.dart';
+import '../pages/paper/paper_control.dart';
+import '../pages/paper/paper_home.dart';
+import '../pages/paper/paper_music.dart';
+import '../pages/paper/paper_settings.dart';
+import '../pages/paper/paper_system.dart';
+import '../pages/paper/paper_timer.dart';
 import '../pages/edge/edge_home.dart';
 import '../pages/edge/edge_music.dart';
 import '../pages/edge/edge_settings.dart';
@@ -93,6 +100,17 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
   /// view counts pages without end; start far from zero so both directions have room.
   /// Pages that already have their Edge screen (the rest still show the old page until built).
   static const _edgeScreens = {
+    PageId.home,
+    PageId.claude,
+    PageId.music,
+    PageId.system,
+    PageId.control,
+    PageId.timer,
+    PageId.settings,
+  };
+
+  /// Pages that already have their Paper screen.
+  static const _paperScreens = {
     PageId.home,
     PageId.claude,
     PageId.music,
@@ -358,6 +376,30 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
           ),
         ].whereType<Widget>().toList();
 
+    if (!glow && s.theme == ThemeId.paper && _paperScreens.contains(page)) {
+      // A Paper page draws its own header; banners sit above it.
+      return Padding(
+        padding: EdgeInsets.fromLTRB(left, 10, 10, 10),
+        child: Column(
+          children: [
+            if (banners.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < banners.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: banners[i]),
+                    ],
+                  ],
+                ),
+              ),
+            Expanded(child: _paperBody(page)),
+          ],
+        ),
+      );
+    }
+
     if (glow && _edgeScreens.contains(page)) {
       // An Edge screen draws its own header and padding; banners sit along its top edge.
       return EdgeGlow(
@@ -414,6 +456,17 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
     );
     return glow ? EdgeGlow(page: page, child: body) : body;
   }
+
+  Widget _paperBody(PageId page) => switch (page) {
+    PageId.home => PaperHome(now: _now),
+    PageId.claude => PaperClaude(now: _now, use24h: widget.settings.use24h),
+    PageId.music => PaperMusic(now: _now, use24h: widget.settings.use24h, listening: _listening),
+    PageId.system => PaperSystem(now: _now, use24h: widget.settings.use24h),
+    PageId.control => PaperControl(now: _now, use24h: widget.settings.use24h),
+    PageId.timer => PaperTimer(now: _now, use24h: widget.settings.use24h),
+    PageId.settings => PaperSettings(now: _now, use24h: widget.settings.use24h),
+    _ => _pageBody(page),
+  };
 
   Widget _edgeBody(PageId page) => switch (page) {
     PageId.home => EdgeHome(now: _now),

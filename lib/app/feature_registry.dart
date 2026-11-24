@@ -37,3 +37,16 @@ List<PageId> edgeTabs([List<FeatureDescriptor> registry = featureRegistry]) {
   if (registry.any((f) => f.edgeTab && f.page == PageId.settings)) tabs.add(PageId.settings);
   return tabs;
 }
+
+/// The pages in a sidebar (Color Blocks, Paper): the designed ones in tab order, Settings is pinned apart.
+/// Pages that aren't designed yet stay in the registry and are listed under Settings → Sidebar.
+List<PageId> sidebarPages([List<FeatureDescriptor> registry = featureRegistry]) => [
+  for (final p in edgeTabs(registry))
+    if (p != PageId.settings) p,
+];
+
+/// Registered pages that aren't designed yet (listed under Settings → Sidebar for future work).
+List<PageId> futurePages([List<FeatureDescriptor> registry = featureRegistry]) => [
+  for (final f in registry)
+    if (!f.edgeTab) f.page,
+];
