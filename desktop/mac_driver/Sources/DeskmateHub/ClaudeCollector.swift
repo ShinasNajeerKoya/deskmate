@@ -97,7 +97,7 @@ final class ClaudeCollector {
         for url in logFiles(modifiedAfter: weekStart) {
             readNewLines(url, since: weekStart)
             let modified = (try? url.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
-            if now.timeIntervalSince(modified) < 30 * 60 {
+            if now.timeIntervalSince(modified) < 10 * 60 {
                 active += 1
                 let s = files[url] ?? FileState()
                 if s.lastKind == "assistant" && s.lastStop == "end_turn" { waiting += 1 }

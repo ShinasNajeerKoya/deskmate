@@ -22,6 +22,7 @@ import '../ui/rail.dart';
 import 'app_scope.dart';
 import 'demo_tour.dart';
 import 'focus_timer.dart';
+import 'listening_tracker.dart';
 import 'phone_battery.dart';
 import 'settings.dart';
 
@@ -57,6 +58,7 @@ class _ShellState extends State<Shell> {
   DateTime? _peekUntil;
   bool _dimmed = false;
   Timer? _tick;
+  final _listening = ListeningTracker();
 
   /// The "unplug" banner was closed until the battery reaches this level (reset when unplugged).
   int? _unplugSnoozedUntil;
@@ -64,7 +66,11 @@ class _ShellState extends State<Shell> {
   @override
   void initState() {
     super.initState();
-    _tick = Timer.periodic(const Duration(seconds: 1), (_) => setState(() => _now = widget.link.now()));
+    _tick = Timer.periodic(const Duration(seconds: 1), (_) {
+      _now = widget.link.now();
+      _listening.update(widget.link.board.music?.playing ?? false, _now);
+      setState(() {});
+    });
     widget.tour?.addListener(_followTour);
   }
 
@@ -207,8 +213,8 @@ class _ShellState extends State<Shell> {
 
   Widget _pageBody() => switch (_page) {
     PageId.home => HomePage(now: _now),
-    PageId.claude => ClaudePage(now: _now),
-    PageId.music => const MusicPage(),
+    PageId.claude => ClaudePage(now: _now, use24h: widget.settings.use24h),
+    PageId.music => MusicPage(listening: _listening),
     PageId.system => const SystemPage(),
     PageId.control => const ControlPage(),
     PageId.timer => const TimerPage(),

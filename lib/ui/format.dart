@@ -19,6 +19,10 @@ const _months = [
 
 String two(int n) => n.toString().padLeft(2, '0');
 
+/// "3:40 PM" (12-hour) or "15:40" (24-hour).
+String clockWithSuffix(DateTime d, bool use24h) =>
+    use24h ? clockText(d, true) : '${displayHour(d, false)}:${two(d.minute)} ${d.hour < 12 ? 'AM' : 'PM'}';
+
 /// "Monday, 23 November"
 String longDate(DateTime d) => '${_weekdays[d.weekday - 1]}, ${d.day} ${_months[d.month - 1]}';
 
@@ -35,6 +39,9 @@ int displayHour(DateTime d, bool use24h) => use24h ? d.hour : (d.hour % 12 == 0 
 String clockText(DateTime d, bool use24h) => '${two(displayHour(d, use24h))}:${two(d.minute)}';
 
 /// "1:24" from seconds.
+String stopwatch(Duration d) =>
+    d.inHours > 0 ? '${d.inHours}:${two(d.inMinutes % 60)}:${two(d.inSeconds % 60)}' : mmss(d.inSeconds);
+
 String mmss(int seconds) => '${seconds ~/ 60}:${two(seconds % 60)}';
 
 /// "1h 48m" / "12m"

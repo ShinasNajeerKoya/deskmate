@@ -8,9 +8,10 @@ import '../ui/format.dart';
 import '../ui/widgets.dart';
 
 class ClaudePage extends StatefulWidget {
-  const ClaudePage({super.key, required this.now});
+  const ClaudePage({super.key, required this.now, this.use24h = false});
 
   final DateTime now;
+  final bool use24h;
 
   @override
   State<ClaudePage> createState() => _ClaudePageState();
@@ -49,13 +50,24 @@ class _ClaudePageState extends State<ClaudePage> {
                 ),
               ),
               if (reset != null)
-                Pill(
-                  color: t.clayInk.withValues(alpha: 0.12),
-                  child: Text(
-                    'Resets in ${hm(Duration(minutes: reset))}',
-                    maxLines: 1,
-                    style: t.ui(12, weight: 600, color: t.clayInk),
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Pill(
+                      color: t.clayInk.withValues(alpha: 0.12),
+                      child: Text(
+                        'Resets in ${hm(Duration(minutes: reset))}',
+                        maxLines: 1,
+                        style: t.ui(12, weight: 600, color: t.clayInk),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'at ${clockWithSuffix(now.add(Duration(minutes: reset)), widget.use24h)}',
+                      maxLines: 1,
+                      style: t.ui(12, color: t.clayInk.withValues(alpha: 0.75)),
+                    ),
+                  ],
                 ),
             ],
           ),
@@ -137,32 +149,36 @@ class _ClaudePageState extends State<ClaudePage> {
       radius: 22,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       label: 'Usage by model',
-      fitHeight: 90,
+      fitHeight: 88,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text('By model', style: t.ui(13, weight: 600, color: t.mintInk)),
-          Column(
-            children: [
-              for (final m in (c?.models ?? const []).take(3))
-                Padding(
-                  padding: const EdgeInsets.only(top: 5),
-                  child: Row(
-                    children: [
-                      SizedBox(
-                        width: 50,
-                        child: Text(m.name, maxLines: 1, style: t.ui(12, weight: 500, color: t.mintInk)),
+          const SizedBox(height: 6),
+          for (final (i, m) in (c?.models ?? const []).take(3).indexed)
+            Padding(
+              padding: EdgeInsets.only(top: i == 0 ? 0 : 4),
+              child: SizedBox(
+                height: 16,
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 56,
+                      child: Text(
+                        m.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: t.ui(12, weight: 500, color: t.mintInk),
                       ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: ProgressLine(value: m.share, fill: t.mintInk, track: t.mintInk.withValues(alpha: 0.15)),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ProgressLine(value: m.share, fill: t.mintInk, track: t.mintInk.withValues(alpha: 0.15)),
+                    ),
+                  ],
                 ),
-            ],
-          ),
+              ),
+            ),
         ],
       ),
     );

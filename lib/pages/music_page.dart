@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../app/app_scope.dart';
+import '../app/listening_tracker.dart';
 import '../data/models.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/format.dart';
@@ -9,7 +10,10 @@ import '../ui/swipe_art.dart';
 import '../ui/widgets.dart';
 
 class MusicPage extends StatelessWidget {
-  const MusicPage({super.key});
+  const MusicPage({super.key, required this.listening});
+
+  /// How long music has been playing in the current stretch (see [ListeningTracker]).
+  final ListeningTracker listening;
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +53,7 @@ class MusicPage extends StatelessWidget {
           const SizedBox(width: 22),
           Expanded(
             child: ShrinkToFit(
-              minHeight: 250,
+              minHeight: 264,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -212,17 +216,55 @@ class MusicPage extends StatelessWidget {
       child: Text(text, style: t.ui(12, weight: 600, color: t.muted)),
     );
 
+    String span(Duration d) => d.inMinutes < 1 ? '<1m' : hm(d);
+    final current = listening.current, last = listening.last;
     final upNext = Container(
       width: 210,
-      padding: const EdgeInsets.fromLTRB(12, 12, 12, 8),
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
       decoration: BoxDecoration(color: t.panel, borderRadius: BorderRadius.circular(22)),
-      child: ListView(
-        padding: EdgeInsets.zero,
+      child: Column(
         children: [
-          if (previous.isNotEmpty) ...[header('Previous'), ...previous.map(song), const SizedBox(height: 8)],
-          header('Up next'),
-          if (next.isEmpty) Text('Nothing queued', style: t.ui(12, color: t.muted)),
-          ...next.map(song),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                if (previous.isNotEmpty) ...[header('Previous'), ...previous.map(song), const SizedBox(height: 8)],
+                header('Up next'),
+                if (next.isEmpty) Text('Nothing queued', style: t.ui(12, color: t.muted)),
+                ...next.map(song),
+              ],
+            ),
+          ),
+          // Listening time: the stretch that ended last (small), then the running one.
+          if (current != null || last != null) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.bottomRight,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (last != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 4, right: 4),
+                      child: Text('Earlier · ${span(last)}', style: t.ui(11, color: t.muted)),
+                    ),
+                  if (current != null)
+                    Pill(
+                      color: t.violet,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Dot(color: playing ? t.clay : t.muted, size: 6),
+                          const SizedBox(width: 6),
+                          Text(stopwatch(current), maxLines: 1, style: t.ui(13, weight: 600, color: t.cream)),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );

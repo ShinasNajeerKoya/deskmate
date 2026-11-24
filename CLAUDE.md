@@ -131,6 +131,8 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 **Test devices:** Samsung Galaxy M14 (`SM-M146B`, adb serial `RZCX10FT2RZ`) over USB; adb is at `~/Library/Android/sdk/platform-tools/adb`. Target phone: iQOO Neo 10R. Simulators and emulators run demo mode (`DemoTour`).
 
 **Known gaps / next:**
+- **Claude 5-hour / weekly limits not showing (open, 23 Nov 2026):** the status line is connected (`~/.claude/settings.json` points at `~/Library/Application Support/Deskmate/claude-statusline.sh`) but `claude-status.json` never appeared, because Claude Code hadn't run the script. Next step is the user's: start a new `claude` session, send a message, check the file exists. If it exists but the phone shows no limits, read it and check `rate_limits` vs `ClaudeCollector.swift`. If it has no `rate_limits`, the plan doesn't provide them (only Pro/Max/Ultra do) and nothing more can be done.
+- Music (23 Nov): the swipe art (`lib/ui/swipe_art.dart`) is on the Music page and Home Layout B, not A. Hub `music.previous` plays the previous queue entry (not the Previous button, which restarts the song); the queue sends 1 previous and 3 next. Both are untested on real hardware, and need the rebuilt Hub installed.
 - Tap-to-play on the Music queue is untested on real hardware.
 - Windows Hub needs the Wi-Fi link (and ideally the Bluetooth, Wi-Fi, music and Claude data the Mac sends).
 - Not designed yet: Calendar, Weather, Shortcuts, GitHub pages and Home layout C (C must use the Bluetooth tile, not a calendar tile).

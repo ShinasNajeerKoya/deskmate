@@ -4,7 +4,25 @@ import Foundation
 
 /// Album artwork for the phone (which has no internet): the Mac downloads each image
 /// once, shrinks it to a small JPEG and keeps it by a short id derived from its URL.
+/// Images are also saved on disk for a day, so a restart doesn't download them again;
+/// anything older than a day is deleted and fetched fresh.
 final class ArtCache {
+    private static let maxAge: TimeInterval = 24 * 60 * 60
+    private let folder = FileManager.default.homeDirectoryForCurrentUser
+        .appendingPathComponent("Library/Caches/Deskmate/art")
+
+    init() {
+        try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let files = (try? FileManager.default.contentsOfDirectory(
+            at: folder, includingPropertiesForKeys: [.contentModificationDateKey])) ?? []
+        for file in files where Self.isOld(file) { try? FileManager.default.removeItem(at: file) }
+    }
+
+    private static func isOld(_ file: URL) -> Bool {
+        let saved = (try? file.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate) ?? .distantPast
+        return Date().timeIntervalSince(saved) > maxAge
+    }
+
     /// Called on the main thread when an image is ready to send.
     var onReady: ((_ id: String) -> Void)?
     private var images: [String: Data] = [:]
@@ -15,6 +33,13 @@ final class ArtCache {
     func id(for url: String, size: Int) -> String? {
         guard !url.isEmpty, let source = URL(string: url) else { return nil }
         let id = Self.id(url, size)
+        if images[id] == nil {
+            let file = folder.appendingPathComponent("\(id).jpg")
+            if !Self.isOld(file), let saved = try? Data(contentsOf: file) {
+                images[id] = saved
+                remember(id)
+            }
+        }
         if images[id] == nil && !loading.contains(id) {
             loading.insert(id)
             URLSession.shared.dataTask(with: source) { [weak self] data, _, _ in
@@ -24,11 +49,8 @@ final class ArtCache {
                     self.loading.remove(id)
                     guard let jpeg else { return }
                     self.images[id] = jpeg
-                    self.order.append(id)
-                    if self.order.count > 60, let old = self.order.first {  // keep memory small
-                        self.order.removeFirst()
-                        self.images[old] = nil
-                    }
+                    try? jpeg.write(to: self.folder.appendingPathComponent("\(id).jpg"), options: .atomic)
+                    self.remember(id)
                     self.onReady?(id)
                 }
             }.resume()
@@ -37,6 +59,15 @@ final class ArtCache {
     }
 
     func data(for id: String) -> Data? { images[id] }
+
+    /// Keeps memory small: the oldest images drop out of memory (they stay on disk).
+    private func remember(_ id: String) {
+        order.append(id)
+        if order.count > 60, let old = order.first {
+            order.removeFirst()
+            images[old] = nil
+        }
+    }
 
     private static func id(_ url: String, _ size: Int) -> String {
         let digest = SHA256.hash(data: Data("\(size)|\(url)".utf8))

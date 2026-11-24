@@ -110,6 +110,13 @@ final class MusicCollector {
       const shuffle = bar && bar.querySelector('.shuffle');
       const art = (md.artwork || []).filter(a => a.src).sort((a, b) => parseInt(a.sizes) - parseInt(b.sizes));
       const pick = art.find(a => parseInt(a.sizes) >= 200) || art[art.length - 1];
+      // The song's own time, as YouTube Music's player bar shows it. The <video> element can
+      // report a different length (mixes, intros) or keep the last song's values for a moment.
+      const pb = bar && bar.querySelector('#progress-bar');
+      const barMax = pb ? parseFloat(pb.getAttribute('aria-valuemax')) : NaN, barVal = pb ? parseFloat(pb.getAttribute('aria-valuenow')) : NaN;
+      const useBar = isFinite(barMax) && barMax > 0 && isFinite(barVal);
+      const dur = useBar ? Math.floor(barMax) : (v && isFinite(v.duration) ? Math.floor(v.duration) : 0);
+      const pos = useBar ? Math.min(Math.floor(barVal), dur) : (v ? Math.floor(v.currentTime) : 0);
       const items = [...document.querySelectorAll('ytmusic-player-queue-item')].filter(q => !q.closest('#counterpart-renderer'));
       const cur = items.findIndex(q => q.hasAttribute('selected'));
       const entry = (q, i) => {
@@ -125,7 +132,7 @@ final class MusicCollector {
       const next = cur >= 0 ? items.slice(cur + 1, cur + 4).map((q, k) => entry(q, cur + 1 + k)) : [];
       return JSON.stringify({
         title: md.title.slice(0, 48), artist: (md.artist || '').slice(0, 34), album: (md.album || '').slice(0, 34),
-        playing: !!v && !v.paused, pos: v ? Math.floor(v.currentTime) : 0, dur: v && isFinite(v.duration) ? Math.floor(v.duration) : 0,
+        playing: !!v && !v.paused, pos: pos, dur: dur,
         vol: v ? Math.round(v.volume * 100) / 100 : null,
         liked: !!like && like.getAttribute('like-status') === 'LIKE',
         shuffle: !!shuffle && (shuffle.getAttribute('aria-pressed') === 'true' || shuffle.classList.contains('active')),
