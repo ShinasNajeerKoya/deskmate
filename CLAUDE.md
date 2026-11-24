@@ -67,8 +67,8 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 - **The phone makes zero internet calls.** Its only network traffic is the encrypted Wi-Fi link to its own paired computer on the local network (`docs/PROTOCOL.md`).
   - Fonts are bundled assets; never use `google_fonts` runtime fetching.
   - Weather, time and all other data come from the Mac.
-- **No hard-coded colours, fonts or radii in widgets.** Read everything from `DeskTheme` (ThemeExtension). There are 4 themes: **Edge (default once built)**, Color Blocks, Paper and Paper Blocks. Graphite is removed. Until the Edge shell and screens ship, the running default is still Color Blocks (`ThemeId.defaultTheme`).
-- **Navigation style belongs to the theme.** Edge uses full-screen swipe tabs (one `PageView`) with page dots at the bottom and no sidebar; Color Blocks, Paper and Paper Blocks keep the sidebar. The phone never shows both. Switching theme in Settings animates the change (about 500 ms). Spec: `docs/EDGE_DESIGN_UPDATE_PROMPT.md`.
+- **No hard-coded colours, fonts or radii in widgets.** Read everything from `DeskTheme` (ThemeExtension). There are 3 themes: **Edge (default once built)**, Color Blocks and Paper (Paper Blocks was scrapped on 24 Nov 2026; an entirely new fourth theme is being designed). Graphite is removed. Until the Edge shell and screens ship, the running default is still Color Blocks (`ThemeId.defaultTheme`).
+- **Navigation style belongs to the theme.** Edge uses full-screen swipe tabs (one `PageView`) with page dots at the bottom and no sidebar; Color Blocks and Paper keep the sidebar. The phone never shows both. Switching theme in Settings animates the change (about 500 ms). Spec: `docs/EDGE_DESIGN_UPDATE_PROMPT.md`.
 - **The UI depends only on the `DeskTransport` interface**, never on BLE directly. Everything must work on `FakeTransport`.
 - **New pages go through the feature registry** (`FeatureDescriptor`). The sidebar, Home tiles and Settings read from it.
 - **Home layouts are data:** a 6×4 grid spec saved in settings. They aren't hand-built widget trees.

@@ -15,17 +15,34 @@ import '../../ui/widgets.dart';
 /// Edge · Music: big art, the song and its controls in the middle, and the queue on the right
 /// (1 previous track, dimmed, and 3 up next; tap one to play it).
 class EdgeMusic extends StatelessWidget {
-  const EdgeMusic({super.key, required this.now, required this.use24h, required this.listening});
+  const EdgeMusic({
+    super.key,
+    required this.now,
+    required this.use24h,
+    required this.listening,
+    this.bottomInset = 30,
+    this.controlsLift = 0,
+    this.pillControls = false,
+  });
 
   final DateTime now;
   final bool use24h;
   final ListeningTracker listening;
 
+  /// Room kept at the bottom: 30 px for Edge's page dots, more under Horizon's floating bar.
+  final double bottomInset;
+
+  /// Lifts the play controls above the bottom edge (Horizon's floating bar sits there).
+  final double controlsLift;
+
+  /// Horizon's controls: outlined round and pill buttons with a wide light play pill.
+  final bool pillControls;
+
   @override
   Widget build(BuildContext context) {
     final t = DeskmateTokens.of(context);
     return Padding(
-      padding: const EdgeInsets.fromLTRB(28, 14, 28, 30),
+      padding: EdgeInsets.fromLTRB(28, 14, 28, bottomInset),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -49,7 +66,7 @@ class EdgeMusic extends StatelessWidget {
                         children: [
                           const _Art(),
                           const SizedBox(width: 32),
-                          Expanded(child: _Player(listening: listening)),
+                          Expanded(child: _Player(listening: listening, lift: controlsLift, pill: pillControls)),
                           const SizedBox(width: 32),
                           _Queue(listening: listening),
                         ],
@@ -90,9 +107,11 @@ class _Art extends StatelessWidget {
 }
 
 class _Player extends StatelessWidget {
-  const _Player({required this.listening});
+  const _Player({required this.listening, this.lift = 0, this.pill = false});
 
   final ListeningTracker listening;
+  final double lift;
+  final bool pill;
 
   @override
   Widget build(BuildContext context) {
@@ -154,43 +173,85 @@ class _Player extends StatelessWidget {
               ),
             ],
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              button(
-                DIcon.shuffle,
-                'Shuffle',
-                'music.shuffle',
-                size: 44,
-                glyph: 20,
-                color: (m?.shuffle ?? false) ? t.text : t.muted,
-              ),
-              button(DIcon.previous, 'Previous', 'music.previous'),
-              Semantics(
-                button: true,
-                label: playing ? 'Pause' : 'Play',
-                child: GestureDetector(
-                  behavior: HitTestBehavior.opaque,
-                  onTap: () => link.sendCommand('music.toggle'),
-                  child: Container(
-                    width: 68,
-                    height: 68,
-                    decoration: BoxDecoration(color: t.text, shape: BoxShape.circle),
-                    child: Center(child: DIconView(playing ? DIcon.pause : DIcon.play, size: 28, color: t.bg)),
+          if (pill)
+            Padding(
+              padding: EdgeInsets.only(bottom: lift),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _pillButton(
+                    t,
+                    DIcon.shuffle,
+                    'Shuffle',
+                    46,
+                    46,
+                    () => link.sendCommand('music.shuffle'),
+                    color: (m?.shuffle ?? false) ? t.text : t.muted,
                   ),
-                ),
+                  _pillButton(t, DIcon.previous, 'Previous', 62, 56, () => link.sendCommand('music.previous')),
+                  _pillButton(
+                    t,
+                    playing ? DIcon.pause : DIcon.play,
+                    playing ? 'Pause' : 'Play',
+                    84,
+                    66,
+                    () => link.sendCommand('music.toggle'),
+                    main: true,
+                  ),
+                  _pillButton(t, DIcon.next, 'Next', 62, 56, () => link.sendCommand('music.next')),
+                  _pillButton(
+                    t,
+                    (m?.liked ?? false) ? DIcon.heart : DIcon.heartOutline,
+                    'Like',
+                    46,
+                    46,
+                    () => link.sendCommand('music.like'),
+                    color: t.clay,
+                  ),
+                ],
               ),
-              button(DIcon.next, 'Next', 'music.next'),
-              button(
-                (m?.liked ?? false) ? DIcon.heart : DIcon.heartOutline,
-                'Like',
-                'music.like',
-                size: 44,
-                glyph: 22,
-                color: t.clay,
+            )
+          else
+            Padding(
+              padding: EdgeInsets.only(bottom: lift),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  button(
+                    DIcon.shuffle,
+                    'Shuffle',
+                    'music.shuffle',
+                    size: 44,
+                    glyph: 20,
+                    color: (m?.shuffle ?? false) ? t.text : t.muted,
+                  ),
+                  button(DIcon.previous, 'Previous', 'music.previous'),
+                  Semantics(
+                    button: true,
+                    label: playing ? 'Pause' : 'Play',
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () => link.sendCommand('music.toggle'),
+                      child: Container(
+                        width: 68,
+                        height: 68,
+                        decoration: BoxDecoration(color: t.text, shape: BoxShape.circle),
+                        child: Center(child: DIconView(playing ? DIcon.pause : DIcon.play, size: 28, color: t.bg)),
+                      ),
+                    ),
+                  ),
+                  button(DIcon.next, 'Next', 'music.next'),
+                  button(
+                    (m?.liked ?? false) ? DIcon.heart : DIcon.heartOutline,
+                    'Like',
+                    'music.like',
+                    size: 44,
+                    glyph: 22,
+                    color: t.clay,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
         ],
       ),
     );
@@ -302,3 +363,34 @@ class _Listening extends StatelessWidget {
     );
   }
 }
+
+/// One of Horizon's controls: a dark outlined pill (or circle); the main one is light with a soft glow.
+Widget _pillButton(
+  DeskmateTokens t,
+  DIcon icon,
+  String label,
+  double w,
+  double h,
+  VoidCallback onTap, {
+  bool main = false,
+  Color? color,
+}) => Semantics(
+  button: true,
+  label: label,
+  child: GestureDetector(
+    behavior: HitTestBehavior.opaque,
+    onTap: onTap,
+    child: Container(
+      width: w,
+      height: h,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        color: main ? t.text : const Color(0x0FFFFFFF),
+        borderRadius: BorderRadius.circular(h / 2),
+        border: main ? null : Border.all(color: const Color(0x24FFFFFF)),
+        boxShadow: main ? const [BoxShadow(color: Color(0x598EA2FF), blurRadius: 24, offset: Offset(0, 10))] : null,
+      ),
+      child: DIconView(icon, size: main ? 26 : 22, color: main ? t.bg : (color ?? t.text)),
+    ),
+  ),
+);

@@ -22,9 +22,9 @@ Design canvas (source of truth): https://claude.ai/artifact/A4YezfL5M982Eo9coC9G
 3. **Tab order (final):** `Home → Claude → Music → System → Control Center → Settings`.
    - Settings is always the last tab.
    - Calendar, Weather, Shortcuts and GitHub are **not part of the Edge tab set yet** (not designed). **Timer is an Edge tab** (designed 24 Nov 2026, see section 3). Don't build them now, but keep them in the feature registry so they can slot in later.
-4. **Four themes:** `Edge` (default), `Color Blocks`, `Paper`, `Paper Blocks`. Graphite is **removed**.
+4. **Three themes:** `Edge` (default), `Color Blocks`, `Paper`. Graphite and Paper Blocks are **removed**.
    - Edge uses swipe tabs and dots.
-   - **Color Blocks, Paper and Paper Blocks keep the sidebar** layout from the earlier boards (`Page-*` and `Rail`).
+   - **Color Blocks and Paper keep the sidebar** layout from the earlier boards (`Page-*` and `Rail`).
    - So **navigation style is a property of the theme**: `DeskTheme.navigation = NavStyle.swipeDots | NavStyle.sidebar`.
 5. **Animated switch between navigation styles.** In Settings, picking a theme changes the navigation live:
    - Picking Edge: the sidebar slides out to the left (about 24 px) while fading and collapsing its width to 0, over about 500 ms with an ease-in-out curve. The content widens to fill the space, and the page dots fade in and slide up from the bottom at the same time.
@@ -78,7 +78,7 @@ All screens target 915 × 412 dp, landscape, with a 28 px left/right padding and
   - On the right of the controls: "Session 3 of 4" with four small bars and "1h 20m focused today".
   - The timer runs on the phone, so this tab works before the Mac is found. Home's clock and Timer ring open it.
 - **Settings (last tab)**, redesigned 24 Nov 2026 in the Edge style (borderless, caps labels, hairlines; board `Edge · Settings`):
-  - Theme: four small previews in a row (Edge, Color Blocks, Paper, Paper Blocks) with a light ring on the one in use; picking one runs the navigation animation from section 1.
+  - Theme: small previews in a row (Edge, Color Blocks, Paper) with a light ring on the one in use; picking one runs the navigation animation from section 1.
   - Below the theme, the settings in two columns: Wi-Fi link, Tab order, Battery warnings (30% · 70%) and Time format (a 12-hour / 24-hour switch). No sub page.
   - No Home layouts (Edge has only one Home layout; layouts are only in the sidebar themes' Settings) and no "Night clock when Mac sleeps" toggle (the night clock is always on).
   - The sidebar themes keep their old Settings page with its items (also without the night clock toggle). Switching theme cross-fades the old Settings into the new one.

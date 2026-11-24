@@ -22,6 +22,11 @@ import '../pages/edge/edge_settings.dart';
 import '../pages/edge/edge_system.dart';
 import '../pages/edge/edge_timer.dart';
 import '../pages/home_page.dart';
+import '../pages/horizon/horizon_claude.dart';
+import '../pages/horizon/horizon_control.dart';
+import '../pages/horizon/horizon_home.dart';
+import '../pages/horizon/horizon_timer.dart';
+import '../pages/horizon/horizon_system.dart';
 import '../pages/link_diagnostics_page.dart';
 import '../pages/music_page.dart';
 import '../pages/night_clock.dart';
@@ -33,6 +38,7 @@ import '../pages/timer_page.dart';
 import '../theme/deskmate_tokens.dart';
 import '../ui/chrome.dart';
 import '../ui/edge_glow.dart';
+import '../ui/horizon_bar.dart';
 import '../ui/page_dots.dart';
 import '../ui/format.dart';
 import '../ui/rail.dart';
@@ -84,7 +90,7 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
 
   /// Navigation style of the current theme: Edge swipes between tabs with page dots,
   /// the others use the sidebar. [_nav] animates between them: 0 = sidebar, 1 = swipe tabs.
-  late bool _swipe = widget.settings.theme.navigation == NavStyle.swipeDots;
+  late bool _swipe = widget.settings.theme.swipes;
   late final AnimationController _nav = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 500),
@@ -215,7 +221,7 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
       listenable: Listenable.merge([widget.link, widget.settings, widget.battery, widget.timer]),
       builder: (context, _) {
         final t = DeskmateTokens.of(context);
-        final swipe = widget.settings.theme.navigation == NavStyle.swipeDots;
+        final swipe = widget.settings.theme.swipes;
         if (swipe != _swipe) _syncNavigation(swipe);
         final night = _night;
         WidgetsBinding.instance.addPostFrameCallback((_) => _setDim(night));
@@ -324,7 +330,20 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
                 ),
               ),
               // The page dots float over the bottom edge: they fade in and slide up.
-              if (c > 0)
+              if (c > 0 && widget.settings.theme.navigation == NavStyle.floatingBar)
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  child: Opacity(
+                    opacity: c,
+                    child: ValueListenableBuilder<int>(
+                      valueListenable: _activeTab,
+                      builder: (context, active, _) => HorizonBar(tabs: _tabs, active: _tabs[active], onSelect: _go),
+                    ),
+                  ),
+                )
+              else if (c > 0)
                 Positioned(
                   left: 0,
                   right: 0,
@@ -395,6 +414,50 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
                 ),
               ),
             Expanded(child: _paperBody(page)),
+          ],
+        ),
+      );
+    }
+
+    if (glow &&
+        s.theme == ThemeId.horizon &&
+        (page == PageId.claude ||
+            page == PageId.home ||
+            page == PageId.system ||
+            page == PageId.control ||
+            page == PageId.timer)) {
+      // Horizon draws its own page; the other pages use the Edge screens until they are built.
+      return DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(-0.9, -1.1),
+            radius: 1.0,
+            colors: [const Color(0x218EA2FF), t.bg.withValues(alpha: 0)],
+          ),
+        ),
+        child: Column(
+          children: [
+            if (banners.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(28, 8, 28, 0),
+                child: Row(
+                  children: [
+                    for (var i = 0; i < banners.length; i++) ...[
+                      if (i > 0) const SizedBox(width: 8),
+                      Expanded(child: banners[i]),
+                    ],
+                  ],
+                ),
+              ),
+            Expanded(
+              child: switch (page) {
+                PageId.home => HorizonHome(now: _now),
+                PageId.system => const HorizonSystem(),
+                PageId.control => const HorizonControl(),
+                PageId.timer => const HorizonTimer(),
+                _ => HorizonClaude(now: _now, use24h: s.use24h),
+              },
+            ),
           ],
         ),
       );
@@ -475,7 +538,14 @@ class _ShellState extends State<Shell> with SingleTickerProviderStateMixin {
     PageId.timer => EdgeTimer(now: _now, use24h: widget.settings.use24h),
     PageId.settings => EdgeSettings(now: _now, use24h: widget.settings.use24h),
     PageId.control => EdgeControl(now: _now, use24h: widget.settings.use24h),
-    PageId.music => EdgeMusic(now: _now, use24h: widget.settings.use24h, listening: _listening),
+    PageId.music => EdgeMusic(
+      now: _now,
+      use24h: widget.settings.use24h,
+      listening: _listening,
+      // Under Horizon the play controls sit higher, above the floating bar.
+      controlsLift: widget.settings.theme == ThemeId.horizon ? 30 : 0,
+      pillControls: widget.settings.theme == ThemeId.horizon,
+    ),
     _ => _pageBody(page),
   };
 

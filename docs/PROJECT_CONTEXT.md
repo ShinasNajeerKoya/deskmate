@@ -87,7 +87,7 @@ Mac: Swift menu-bar app (CoreBluetooth peripheral)  ◄── BLE ──►  Pho
 
 - **Live designs (Claude design canvas):** https://claude.ai/artifact/A4YezfL5M982Eo9coC9Gs7
 - **Chosen theme for v1: "Color Blocks" (iteration 2).** Designed so far: Home A and B (with the Bluetooth tile), Night clock, and the Claude, Music, System, Timer, Settings and **Control Center** pages, plus the shared sidebar.
-- **Four themes** (Settings → Theme): **Edge (default once built)**, Color Blocks, Paper, Paper Blocks. Graphite was removed (24 Nov 2026); a saved Graphite theme migrates to Edge.
+- **Three themes** (Settings → Theme): **Edge (default once built)**, Color Blocks and Paper. Paper Blocks was scrapped (24 Nov 2026); a new fourth theme is being designed (see the canvas row "Iteration 4"). Graphite was removed (24 Nov 2026); a saved Graphite theme migrates to Edge.
 - **Edge tokens** (borderless, dark, soft glows; Inter for UI, Outfit for numbers, weights 200–300 for big digits; both bundled):
 
 | Token | Value |
@@ -129,6 +129,6 @@ Light and printed: warm paper background `#ECE9E2`, off-white cards `#FBFAF7` wi
 
 ## Later (phase 2)
 
-- the Edge screens and shell, then Paper and Paper Blocks
+- the Edge screens and shell, then the new fourth theme
 - an Edge Timer board and extra Edge Home layouts (ask before inventing)
 - Home tile drag-to-resize

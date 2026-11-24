@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 
 /// How pages are switched. A property of the theme, never both at once.
-enum NavStyle { swipeDots, sidebar }
+enum NavStyle { swipeDots, floatingBar, sidebar }
 
-/// The four themes. Edge and Color Blocks have tokens; Edge isn't selectable until its
-/// shell and screens are built. The others fall back to Color Blocks (phase 2).
+/// The themes: Edge, Color Blocks and Paper. (A fourth, entirely new one is being designed.)
 enum ThemeId {
   edge('Edge', [
     Color(0xFF07090D),
@@ -30,20 +29,23 @@ enum ThemeId {
     Color(0xFFFBFAF7),
     Color(0xFFE8572A),
   ], NavStyle.sidebar),
-  paperBlocks('Paper Blocks', [
-    Color(0xFFECE9E2),
-    Color(0xFFFBFAF7),
-    Color(0xFFE07A4F),
-    Color(0xFF2A2440),
-    Color(0xFFBFE3CC),
-    Color(0xFFF2D16B),
-  ], NavStyle.sidebar);
+  horizon('Horizon', [
+    Color(0xFF05070C),
+    Color(0xFFEAF0FF),
+    Color(0xFF8EA2FF),
+    Color(0xFF1B2030),
+    Color(0xFF1B2030),
+    Color(0xFFBFFF4D),
+  ], NavStyle.floatingBar);
 
   const ThemeId(this.label, this.preview, this.navigation);
   final String label;
 
   /// Edge swipes between tabs with page dots; the others keep the sidebar.
   final NavStyle navigation;
+
+  /// True for the themes that swipe between tabs (Edge dots, Horizon floating bar).
+  bool get swipes => navigation != NavStyle.sidebar;
 
   /// The theme used on a fresh install. Edge becomes the default (flip this) once its
   /// shell and screens ship; until then it stays Color Blocks.
@@ -60,7 +62,8 @@ enum ThemeId {
   final List<Color> preview;
 
   /// Edge is selectable as a preview: its shell works, its screens are still being built.
-  bool get available => this == ThemeId.colorBlocks || this == ThemeId.edge || this == ThemeId.paper;
+  bool get available =>
+      this == ThemeId.colorBlocks || this == ThemeId.edge || this == ThemeId.paper || this == ThemeId.horizon;
 }
 
 /// Theme tokens. Widgets read every colour, font and radius from here and
@@ -350,9 +353,73 @@ class DeskmateTokens extends ThemeExtension<DeskmateTokens> {
     railActiveInk: Color(0xFF141414),
   );
 
+  static const horizon = DeskmateTokens(
+    bg: Color(0xFF05070C),
+    panel: Color(0xFF1A1A1D),
+    panel2: Color(0xFF26262A),
+    divider: Color(0x14FFFFFF),
+    track: Color(0x17FFFFFF),
+    text: Color(0xFFEAF0FF),
+    muted: Color(0xFF8C93A5),
+    cream: Color(0xFFF3EEE6),
+    cream2: Color(0xFFE4DCCF),
+    creamInk: Color(0xFF141414),
+    creamMuted: Color(0xFF5F5C56),
+    clay: Color(0xFFBFFF4D),
+    clayInk: Color(0xFF05070C),
+    violet: Color(0xFF2A2440),
+    violet2: Color(0xFF3C3460),
+    lilac: Color(0xFFC9BFF2),
+    mint: Color(0xFFBFE3CC),
+    mintInk: Color(0xFF10261A),
+    butter: Color(0xFFF2D16B),
+    butterInk: Color(0xFF2A2108),
+    ok: Color(0xFFBFFF4D),
+    nightBg: Color(0xFF000000),
+    nightHour: Color(0xFF8C6A4E),
+    nightMinute: Color(0xFF6E685E),
+    nightDots: Color(0xFF3A2A1E),
+    nightLabel: Color(0xFF8A8378),
+    // Banner colours aren't in the locked design yet: orange = clay, blue and
+    // red are placeholders picked to sit with the palette.
+    bannerConnecting: Color(0xFFE07A4F),
+    bannerConnectingInk: Color(0xFF1A0F0A),
+    bannerReconnecting: Color(0xFF9CC3F0),
+    bannerReconnectingInk: Color(0xFF0E1F33),
+    bannerError: Color(0xFFF08A80),
+    bannerErrorInk: Color(0xFF2B0D0A),
+    uiFont: 'Urbanist',
+    numFont: 'Urbanist',
+    radiusTileLarge: 24,
+    radiusTile: 20,
+    radiusButton: 16,
+    radiusRail: 22,
+    radiusDigit: 14,
+    textSoft: Color(0xFF9AA6B8),
+    hairline: Color(0x14FFFFFF),
+    ringTrack: Color(0x17FFFFFF),
+    amber: Color(0xFFF2D16B),
+    teal: Color(0xFF4FD1C5),
+    blue: Color(0xFF7FB2FF),
+    accentViolet: Color(0xFFA58BFF),
+    glowTeal: Color(0xFF2C8C96),
+    glowViolet: Color(0xFF7850C8),
+    glowClay: Color(0xFFE07A4F),
+    glowPurple: Color(0xFF7A4DD8),
+    glowMint: Color(0xFF5ED3A4),
+    border: Color(0x00000000),
+    ink: Color(0xFF141414),
+    ink2: Color(0xFF26262A),
+    onInk: Color(0xFFF3EEE6),
+    inkMuted: Color(0xFFA5A39E),
+    railActive: Color(0xFFF2F5FA),
+    railActiveInk: Color(0xFF05070C),
+  );
+
   static DeskmateTokens forTheme(ThemeId id) => switch (id) {
     ThemeId.edge => edge,
     ThemeId.paper => paper,
+    ThemeId.horizon => horizon,
     _ => colorBlocks,
   };
 

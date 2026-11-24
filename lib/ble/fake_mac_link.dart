@@ -227,6 +227,13 @@ class FakeMacLink extends MacLink {
       'tokens7d': [820000, 1310000, 610000, 1650000, 1120000, 480000, 1200000 + _ticks * 1500],
       'b5Tokens': 1300000 + _ticks * 1500,
       'b5StartHour': 9,
+      'b5Sessions': [
+        for (var i = 5; i >= 0; i--)
+          [
+            DateTime.now().subtract(Duration(hours: 5 * i + 1)).millisecondsSinceEpoch ~/ 1000,
+            i == 0 ? 1300000 + _ticks * 1500 : [420000, 960000, 310000, 1800000, 700000][i - 1],
+          ],
+      ],
       'b5Hours': [880000, 280000, 120000, 20000, _ticks * 1500],
     };
   }

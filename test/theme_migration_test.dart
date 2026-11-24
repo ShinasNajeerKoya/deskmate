@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('Graphite is gone and saved Graphite maps to Edge', () {
-    expect(ThemeId.values.map((t) => t.name), ['edge', 'colorBlocks', 'paper', 'paperBlocks']);
+    expect(ThemeId.values.map((t) => t.name), ['edge', 'colorBlocks', 'paper', 'horizon']);
     expect(ThemeId.fromSaved('graphite'), ThemeId.edge);
   });
 
@@ -17,7 +17,7 @@ void main() {
 
   test('navigation style comes from the theme: only Edge swipes', () {
     expect(ThemeId.edge.navigation, NavStyle.swipeDots);
-    for (final t in [ThemeId.colorBlocks, ThemeId.paper, ThemeId.paperBlocks]) {
+    for (final t in [ThemeId.colorBlocks, ThemeId.paper]) {
       expect(t.navigation, NavStyle.sidebar);
     }
   });

@@ -252,13 +252,32 @@ final class ClaudeCollector {
         var sum = 0
         for r in sorted {
             if start == nil || r.at >= start!.addingTimeInterval(5 * 3600) {
-                start = Date(timeIntervalSince1970: (r.at.timeIntervalSince1970 / 3600).rounded(.down) * 3600)
+                start = Self.hourStart(r.at)
                 sum = 0
             }
             sum += r.tokens
         }
         guard let start, now < start.addingTimeInterval(5 * 3600) else { return nil }
         return (start, sum)
+    }
+
+    /// The start of the local clock hour (not the UTC hour: in a half-hour time zone those differ).
+    private static func hourStart(_ d: Date) -> Date {
+        Calendar.current.dateInterval(of: .hour, for: d)?.start ?? d
+    }
+
+    /// Every 5-hour block from the logs (oldest first): the start and the tokens used in it.
+    private func logBlocks() -> [(start: Date, tokens: Int)] {
+        var blocks: [(start: Date, tokens: Int)] = []
+        for r in replies.values.sorted(by: { $0.at < $1.at }) {
+            if let last = blocks.last, r.at < last.start.addingTimeInterval(5 * 3600) {
+                blocks[blocks.count - 1].tokens += r.tokens
+            } else {
+                let start = Self.hourStart(r.at)
+                blocks.append((start, r.tokens))
+            }
+        }
+        return blocks
     }
 
     private func addLimits(to m: inout [String: Any], now: Date, weekStart: Date) {
@@ -298,6 +317,13 @@ final class ClaudeCollector {
                 let from = windowStart.addingTimeInterval(Double(i) * 3600)
                 return tokens(from: from, to: min(from.addingTimeInterval(3600), now.addingTimeInterval(1)))
             }
+        }
+
+        // The recent 5-hour sessions with their tokens (the current one last): [[start seconds, tokens], …].
+        var sessions = logBlocks().filter { windowStart == nil || $0.start.addingTimeInterval(5 * 3600) <= windowStart!.addingTimeInterval(60) }
+        if let windowStart { sessions.append((windowStart, windowTokens)) }
+        if !sessions.isEmpty {
+            m["b5Sessions"] = sessions.suffix(6).map { [Int($0.start.timeIntervalSince1970), $0.tokens] }
         }
 
         if let w = week, w.resetsAt > nowSec {

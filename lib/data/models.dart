@@ -73,6 +73,16 @@ class ModelShare {
   final double share; // 0..1
 }
 
+/// One 5-hour Claude session: when it started (it runs for 5 hours) and the tokens used in it.
+class BlockSession {
+  const BlockSession(this.start, this.tokens);
+
+  final DateTime start;
+  final int tokens;
+
+  DateTime get end => start.add(const Duration(hours: 5));
+}
+
 class ClaudeUsage {
   const ClaudeUsage({
     this.fiveHourPct,
@@ -89,6 +99,7 @@ class ClaudeUsage {
     this.blockTokens,
     this.blockStartHour,
     this.blockHours = const [],
+    this.blockSessions = const [],
   });
 
   final double? fiveHourPct, weeklyPct;
@@ -110,6 +121,9 @@ class ClaudeUsage {
   final int? blockTokens, blockStartHour;
   final List<int> blockHours;
 
+  /// The recent 5-hour sessions with their tokens, oldest first; the last one is the current session.
+  final List<BlockSession> blockSessions;
+
   int? get tokensToday => tokens7d.isEmpty ? null : tokens7d.last;
 
   factory ClaudeUsage.fromJson(Map<String, dynamic> j) => ClaudeUsage(
@@ -130,6 +144,11 @@ class ClaudeUsage {
     blockTokens: _i(j['b5Tokens']),
     blockStartHour: _i(j['b5StartHour']),
     blockHours: [for (final v in (j['b5Hours'] as List? ?? const [])) (v as num).toInt()],
+    blockSessions: [
+      for (final e in (j['b5Sessions'] as List? ?? const []))
+        if (e is List && e.length >= 2)
+          BlockSession(DateTime.fromMillisecondsSinceEpoch((e[0] as num).toInt() * 1000), (e[1] as num).toInt()),
+    ],
   );
 }
 
