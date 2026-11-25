@@ -120,7 +120,7 @@ Deskmate Hub (Windows): built by `.github/workflows/deskmate-hub-windows.yml` on
 
 ## Current state (updated 23 Nov 2026)
 
-**Versions:** phone app **0.6.0+7**; Deskmate Hub for macOS **0.6.0** (installed in /Applications on the dev Mac); Deskmate Hub for Windows **0.3.1** (Bluetooth only, so it can't connect to phone app 0.5.0+ until it gets the Wi-Fi link). Latest published GitHub release: **v0.4.0**; v0.5.0 and v0.6.0 are built and pushed but not released.
+**Versions:** phone app **0.7.0+8**; Deskmate Hub for macOS **0.7.0** (installed in /Applications on the dev Mac); Deskmate Hub for Windows **0.3.1** (Bluetooth only, so it can't connect to phone app 0.5.0+ until it gets the Wi-Fi link). Latest published GitHub release: **v0.4.0**; v0.5.0 and v0.6.0 are built and pushed but not released.
 
 **Repo:** github.com/ShinasNajeerKoya/deskmate (private), branch `main`. Release signing key and password live in `~/.deskmate/` (never in the repo).
 

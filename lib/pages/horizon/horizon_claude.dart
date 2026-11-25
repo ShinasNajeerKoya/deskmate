@@ -105,7 +105,10 @@ class _HorizonClaudeState extends State<HorizonClaude> {
     const five = Duration(hours: 5);
     final now = widget.now;
     DateTime anchor; // the start of the current slot
-    if (real.isNotEmpty && real.last.end.isAfter(now)) {
+    if (c?.fiveHourResetMin != null) {
+      // The window's own end (now + the minutes left) is exact, so the slots line up with Claude's reset.
+      anchor = now.add(Duration(minutes: c!.fiveHourResetMin!)).subtract(five);
+    } else if (real.isNotEmpty && real.last.end.isAfter(now)) {
       anchor = real.last.start;
     } else if (real.isNotEmpty) {
       final k = now.difference(real.last.start).inMinutes ~/ 300;
